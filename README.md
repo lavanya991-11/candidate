@@ -127,3 +127,39 @@ Notes:
 - The record key in the URL is the **SystemId** GUID, not the Entry No.
 - `PATCH` and `DELETE` need an `If-Match` ETag header; `*` bypasses the concurrency check.
 - `entryNo` and `applicationDate` are read-only - BC assigns them on insert.
+
+## Deploying to Render
+
+The repo contains [`render.yaml`](render.yaml), so Render can configure the service itself.
+
+1. Push this repo to GitHub (see below).
+2. In Render: **New > Blueprint**, pick the repo, and Render reads `render.yaml`
+   (Node, `npm ci`, `npm start`, health check on `/health`).
+3. Fill in the four values marked `sync: false` under **Environment** - they are
+   deliberately not in git:
+   - `BC_TENANT_ID`
+   - `BC_COMPANY_ID`
+   - `BC_CLIENT_ID`
+   - `BC_CLIENT_SECRET`
+4. Set `ALLOWED_ORIGINS` to the deployed URL, e.g.
+   `https://candidate-form.onrender.com` (plus your React app's origin, comma
+   separated). Without this the browser blocks the form's own POST.
+5. Deploy, then check `https://<your-app>.onrender.com/health` - it should report
+   `Business Central SaaS (OAuth client credentials)`.
+
+Notes:
+
+- Render sets `PORT` itself; the app already reads it, so do not set it manually.
+- On the free plan the service sleeps after inactivity, so the first request after
+  an idle period takes a few seconds.
+- `data/candidates.json` (the local fallback) does not survive a redeploy on
+  Render's ephemeral disk. That only matters if BC is unconfigured.
+
+## Pushing to GitHub
+
+```bash
+git remote add origin https://github.com/<you>/candidate-form.git
+git push -u origin main
+```
+
+`.env` is gitignored and must stay that way - it holds the BC client secret.
