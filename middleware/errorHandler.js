@@ -86,6 +86,18 @@ function errorHandler(err, req, res, next) {
   console.error(`[error] ${req.method} ${req.originalUrl} -> ${info.code}: ${info.log || ''}`);
 
   const body = { error: info.message, code: info.code };
+
+  // The candidate row was created but a line or the submit action failed afterwards.
+  // Saying so stops an applicant from filling the form in again and creating a second
+  // draft, and gives recruitment the entry number to finish it off in BC.
+  if (err.partialSave) {
+    body.code = 'BC_PARTIAL_SAVE';
+    body.entryNo = err.partialSave.entryNo;
+    body.error = `${info.message} Your application was created in Business Central as entry `
+      + `${err.partialSave.entryNo} but is still a draft - please quote that number rather `
+      + 'than submitting the form again.';
+  }
+
   if (process.env.NODE_ENV !== 'production' && info.log) {
     body.detail = info.log;
   }

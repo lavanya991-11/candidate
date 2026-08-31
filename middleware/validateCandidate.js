@@ -11,10 +11,12 @@ const MAX = {
   title: 10, firstName: 50, middleName: 50, lastName: 50,
   gender: 20, maritalStatus: 20, positionAppliedFor: 100,
   email: 80, phoneNo: 30, qualification: 20,
-  englishCertification: 10,
+  otherQualification: 100, englishCertification: 10,
 };
 
-const ADDRESS_MAX = { line1: 100, line2: 100, city: 50, state: 50, pinCode: 20, country: 50 };
+// The country field carries a Country/Region code (Code[10] in Business Central),
+// not a country name, so it is shorter than the other address parts.
+const ADDRESS_MAX = { line1: 100, line2: 100, city: 50, state: 50, pinCode: 20, country: 10 };
 
 function cleanAddress(raw = {}, label, errors) {
   const address = {};
@@ -109,6 +111,24 @@ function validateCandidate(req, res, next) {
   candidate.permanentAddress = candidate.sameAsCurrent
     ? { ...candidate.currentAddress }
     : cleanAddress(body.permanentAddress, 'Permanent address', errors);
+
+  // Business Central runs these same checks in Candidate.CheckMandatoryFields() when
+  // the application is submitted. Catching them here keeps a submission from creating
+  // a record in BC that then fails halfway through and is left sitting as a draft.
+  if (!candidate.dateOfBirth) errors.push('Date of birth is required');
+  if (!candidate.currentAddress.line1) errors.push('Current address line 1 is required');
+  if (!candidate.currentAddress.city) errors.push('Current address city is required');
+  if (!candidate.currentAddress.pinCode) errors.push('Current address PIN / post code is required');
+  if (!candidate.qualification) errors.push('Educational qualification is required');
+
+  // Two conditional rules the table enforces with its own errors.
+  if (candidate.otherQualification && candidate.qualification !== 'Other') {
+    errors.push('Another qualification can only be given when qualification is Other');
+  }
+  if (candidate.englishTestDate && candidate.englishCertification !== 'IELTS'
+      && candidate.englishCertification !== 'OET') {
+    errors.push('A most recent test date can only be given when IELTS or OET was attempted');
+  }
 
   candidate.employment = cleanEmployment(body.employment, errors);
   candidate.references = cleanReferences(body.references, errors);

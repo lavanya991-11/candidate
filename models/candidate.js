@@ -7,74 +7,171 @@ const LOCAL_STORE = path.join(__dirname, '..', 'data', 'candidates.json');
 
 const clip = (value, max) => (value || '').slice(0, max);
 
-// The form collects more than the original Candidate table holds. Until the extended
-// AL objects in bc/ are deployed (BC_EXTENDED_SCHEMA=true), the extra detail is folded
-// into the existing text fields so nothing entered on the form is lost.
-function summariseEmployment(rows = []) {
-  return rows
-    .map((r) => {
-      const span = [r.fromDate, r.tillDate].filter(Boolean).join(' to ');
-      const role = [r.position, r.department].filter(Boolean).join(', ');
-      return [r.employerName, role && `(${role})`, span].filter(Boolean).join(' ');
-    })
-    .join('; ');
+// Over OData an enum is sent as the AL member NAME, not its caption, so the form
+// values are translated here. Anything not in a map is left unset rather than
+// guessed - Business Central rejects a value that is not a member of the enum.
+const ENUMS = {
+  salutation: {
+    'Mr.': 'Mr', 'Mrs.': 'Mrs', 'Ms.': 'Ms', Miss: 'Miss', 'Dr.': 'Dr',
+  },
+  gender: { Male: 'Male', Female: 'Female', Other: 'Other' },
+  maritalStatus: {
+    Single: 'Single',
+    Married: 'Married',
+    'Single Mother': 'Single Mother',
+    Separated: 'Separated',
+    Divorced: 'Divorced',
+    'Widow / Widower': 'Widow or Widower',
+  },
+  qualification: {
+    Diploma: 'Diploma', Graduate: 'Graduate', 'Post Graduate': 'Post Graduate', Other: 'Other',
+  },
+  englishCertification: { None: 'None', IELTS: 'IELTS', OET: 'OET' },
+};
+
+// Field names and lengths follow page 70142 "Candidate API" / table 70120 "Candidate".
+// Two rules drive the shape of this payload:
+//   * Derived and read-only fields are never sent. "Candidate Name" is rebuilt by the
+//     table from the name parts, and posting it fails with "Control 'candidateName'
+//     is read-only" whenever the table marks it as such.
+//   * Properties are emitted in page order, because the validation triggers depend on
+//     it: the same-as-current flag must land before the permanent address, the
+//     qualification before its "other" text, and the certification before its date.
+function candidatePayload(c) {
+  const payload = {};
+  const set = (key, value) => {
+    if (value !== undefined && value !== null && value !== '') payload[key] = value;
+  };
+
+  // Personal information
+  set('salutation', ENUMS.salutation[c.title]);
+  set('firstName', clip(c.firstName, 50));
+  set('middleName', clip(c.middleName, 50));
+  set('lastName', clip(c.lastName, 50));
+  set('dateOfBirth', c.dateOfBirth);
+  set('gender', ENUMS.gender[c.gender]);
+  set('maritalStatus', ENUMS.maritalStatus[c.maritalStatus]);
+
+  // Contact information
+  set('email', clip(c.email, 80));
+  set('phoneNo', clip(c.phoneNo, 30));
+
+  // Current address
+  const current = c.currentAddress || {};
+  set('address', clip(current.line1, 100));
+  set('address2', clip(current.line2, 100));
+  set('city', clip(current.city, 50));
+  set('state', clip(current.state, 50));
+  set('postCode', clip(current.pinCode, 20).toUpperCase());
+  set('countryRegionCode', clip(current.country, 10).toUpperCase());
+
+  // Permanent address. "Same as Current Address" has InitValue = true and the table
+  // raises an error on any permanent field while it is set, so the flag is always
+  // sent (before the fields) and the fields only follow when it is off.
+  payload.sameAsCurrentAddress = Boolean(c.sameAsCurrent);
+  if (!c.sameAsCurrent) {
+    const permanent = c.permanentAddress || {};
+    set('permanentAddress', clip(permanent.line1, 100));
+    set('permanentAddress2', clip(permanent.line2, 100));
+    set('permanentCity', clip(permanent.city, 50));
+    set('permanentState', clip(permanent.state, 50));
+    set('permanentPostCode', clip(permanent.pinCode, 20).toUpperCase());
+    set('permanentCountryRegionCode', clip(permanent.country, 10).toUpperCase());
+  }
+
+  // Educational qualification - "Other Qualification" is only accepted alongside Other.
+  const qualification = ENUMS.qualification[c.qualification];
+  set('qualification', qualification);
+  if (qualification === 'Other') set('otherQualification', clip(c.otherQualification, 100));
+
+  // English language certification - a test date without a certification is rejected.
+  const certification = ENUMS.englishCertification[c.englishCertification] || 'None';
+  payload.englishCertification = certification;
+  if (certification !== 'None') set('mostRecentTestDate', c.englishTestDate);
+
+  // The references section states that supplying references is the consent.
+  payload.referenceCheckConsent = (c.references || []).length > 0;
+  set('positionAppliedFor', clip(c.positionAppliedFor, 100));
+
+  return payload;
 }
 
-function summariseReferences(rows = []) {
-  return rows
-    .map((r) => [r.name, r.email, r.phoneNo].filter(Boolean).join(' / '))
-    .join('; ');
+function employmentPayload(row) {
+  const line = {
+    employerName: clip(row.employerName, 100),
+    position: clip(row.position, 100),
+    department: clip(row.department, 100),
+  };
+  if (row.fromDate) line.fromDate = row.fromDate;
+  if (row.tillDate) line.tillDate = row.tillDate;
+  return line;
 }
 
-function formatAddress(address = {}) {
-  return [address.line1, address.line2, address.city, address.state, address.pinCode, address.country]
-    .filter(Boolean)
-    .join(', ');
-}
-
-// Field set of the original table 50100 - always sent.
-function basePayload(c) {
+function referencePayload(row) {
   return {
-    candidateName: clip(c.candidateName, 100),
-    email: clip(c.email, 80),
-    phoneNo: clip(c.phoneNo, 30),
-    education: clip(c.qualification, 250),
-    experience: clip(summariseEmployment(c.employment), 250),
-    skills: clip(summariseReferences(c.references), 250),
-    positionAppliedFor: clip(c.positionAppliedFor, 100),
-    interviewDate: c.interviewDate || null,
+    referenceName: clip(row.name, 100),
+    email: clip(row.email, 80),
+    phoneNo: clip(row.phoneNo, 30),
+    notes: clip(row.notes, 250),
   };
 }
 
-// Extra fields, only valid once the extended AL objects are published. Employment and
-// references get their own wide fields here instead of being squeezed into Skills.
-function extendedPayload(c) {
-  return {
-    title: clip(c.title, 10),
-    firstName: clip(c.firstName, 50),
-    middleName: clip(c.middleName, 50),
-    lastName: clip(c.lastName, 50),
-    dateOfBirth: c.dateOfBirth || null,
-    gender: clip(c.gender, 20),
-    maritalStatus: clip(c.maritalStatus, 20),
-    currentAddress: clip(formatAddress(c.currentAddress), 250),
-    permanentAddress: clip(formatAddress(c.permanentAddress), 250),
-    englishCertification: clip(c.englishCertification, 10),
-    englishTestDate: c.englishTestDate || null,
-    employmentHistory: clip(summariseEmployment(c.employment), 1000),
-    referenceList: clip(summariseReferences(c.references), 1000),
-  };
+// The sub-entities cannot travel in the parent payload: both are page parts linked on
+// the AutoIncrement "Entry No.", so the candidate has to exist before its lines do.
+// "Candidate Entry No." is not sent either - the SubPageLink fills it in, and the
+// field is read-only on both line tables. They are posted one at a time on purpose,
+// because each table numbers a new row from the last one it finds.
+async function postLines(candidateId, candidate) {
+  for (const row of candidate.employment || []) {
+    await bcClient.request('post', `candidates(${candidateId})/employmentHistory`, {
+      data: employmentPayload(row),
+    });
+  }
+  for (const row of candidate.references || []) {
+    await bcClient.request('post', `candidates(${candidateId})/candidateReferences`, {
+      data: referencePayload(row),
+    });
+  }
 }
 
-function toBcPayload(candidate) {
-  if (!config.bc.extendedSchema) return basePayload(candidate);
+// Once everything is in place the bound action moves the application out of Draft.
+// It re-checks the mandatory fields server side, so this is also the point where a
+// gap between the form's rules and the table's rules would surface.
+async function submitApplication(candidateId) {
+  await bcClient.request('post', `candidates(${candidateId})/Microsoft.NAV.submit`, { data: {} });
+}
 
-  return {
-    ...basePayload(candidate),
-    // Skills carries the reference summary only in the fallback mapping.
-    skills: '',
-    ...extendedPayload(candidate),
-  };
+async function createInBc(candidate) {
+  const created = await bcClient.request('post', 'candidates', { data: candidatePayload(candidate) });
+  const { id } = created;
+
+  // The candidate row already exists from here on. If a line fails, say so plainly
+  // instead of letting it read as "nothing was saved" - the application is in
+  // Business Central as a draft and can be completed there.
+  try {
+    await postLines(id, candidate);
+  } catch (err) {
+    err.partialSave = { id, entryNo: created.entryNo };
+    throw err;
+  }
+
+  let submitted = true;
+  try {
+    await submitApplication(id);
+  } catch (err) {
+    // The bound action only exists once the API page carries a ServiceEnabled submit
+    // procedure. Where it is missing the application still arrived in full and simply
+    // stays a draft, which recruitment can submit in BC - not worth losing over.
+    if (err.response?.status !== 404) {
+      err.partialSave = { id, entryNo: created.entryNo };
+      throw err;
+    }
+    submitted = false;
+    console.warn('[bc] candidates/Microsoft.NAV.submit is not published - entry '
+      + `${created.entryNo} was left as a draft.`);
+  }
+
+  return { ...await bcClient.request('get', `candidates(${id})`), submitted };
 }
 
 async function readLocal() {
@@ -92,9 +189,7 @@ async function writeLocal(rows) {
 }
 
 async function create(candidate) {
-  if (config.bc.enabled) {
-    return bcClient.request('post', 'candidates', { data: toBcPayload(candidate) });
-  }
+  if (config.bc.enabled) return createInBc(candidate);
 
   // Local mode keeps the full structure - it is not limited by the BC table.
   const rows = await readLocal();
@@ -102,6 +197,7 @@ async function create(candidate) {
     id: String(Date.now()),
     entryNo: rows.length + 1,
     ...candidate,
+    applicationStatus: 'Submitted',
     applicationDate: new Date().toISOString().slice(0, 10),
   };
   rows.push(row);
@@ -119,4 +215,6 @@ async function list() {
   return (await readLocal()).reverse();
 }
 
-module.exports = { create, list, toBcPayload, summariseEmployment, summariseReferences, formatAddress };
+module.exports = {
+  create, list, candidatePayload, employmentPayload, referencePayload, ENUMS,
+};

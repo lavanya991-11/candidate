@@ -5,10 +5,14 @@ const submitBtn = document.getElementById('submit-btn');
 
 const DRAFT_KEY = 'candidate-form-draft';
 
+// Business Central stores a Country/Region code, not a country name, so the option
+// value is the code and only the label is the name. The codes must exist on the
+// Countries/Regions page in Business Central or the record is rejected.
 const COUNTRIES = [
-  'India', 'United Arab Emirates', 'Saudi Arabia', 'Qatar', 'Oman', 'Kuwait', 'Bahrain',
-  'United Kingdom', 'United States', 'Canada', 'Australia', 'New Zealand', 'Singapore',
-  'Malaysia', 'Germany', 'Ireland', 'Other',
+  ['IN', 'India'], ['AE', 'United Arab Emirates'], ['SA', 'Saudi Arabia'], ['QA', 'Qatar'],
+  ['OM', 'Oman'], ['KW', 'Kuwait'], ['BH', 'Bahrain'], ['GB', 'United Kingdom'],
+  ['US', 'United States'], ['CA', 'Canada'], ['AU', 'Australia'], ['NZ', 'New Zealand'],
+  ['SG', 'Singapore'], ['MY', 'Malaysia'], ['DE', 'Germany'], ['IE', 'Ireland'],
 ];
 
 /* ── row templates for the repeating tables ─────────────────────── */
@@ -98,6 +102,7 @@ function collect() {
     },
     sameAsCurrent: value('sameAsCurrent'),
     qualification: value('qualification'),
+    otherQualification: value('otherQualification'),
     englishCertification: value('englishCertification'),
     englishTestDate: value('englishTestDate'),
     employment: rowsFrom('employment-table', 'emp',
@@ -152,7 +157,8 @@ function restoreDraft() {
   };
 
   ['title', 'firstName', 'middleName', 'lastName', 'dateOfBirth', 'gender', 'maritalStatus',
-    'positionAppliedFor', 'email', 'phoneNo', 'qualification', 'englishCertification',
+    'positionAppliedFor', 'email', 'phoneNo', 'qualification', 'otherQualification',
+    'englishCertification',
     'englishTestDate', 'sameAsCurrent'].forEach((k) => setValue(k, draft[k]));
 
   const addr = (prefix, obj = {}) => {
@@ -203,7 +209,19 @@ function markInvalid() {
 /* ── wiring ─────────────────────────────────────────────────────── */
 document.querySelectorAll('select[data-countries]').forEach((select) => {
   select.innerHTML = '<option value="">Please Select</option>' +
-    COUNTRIES.map((c) => `<option>${c}</option>`).join('');
+    COUNTRIES.map(([code, name]) => `<option value="${code}">${name}</option>`).join('');
+});
+
+// Business Central only accepts "Other Qualification" alongside the Other option.
+function syncOtherQualification() {
+  const other = value('qualification') === 'Other';
+  const input = document.getElementById('otherQualification');
+  input.hidden = !other;
+  if (!other) input.value = '';
+}
+
+form.elements.qualification.forEach((radio) => {
+  radio.addEventListener('change', syncOtherQualification);
 });
 
 for (let i = 0; i < 3; i += 1) {
@@ -315,6 +333,7 @@ form.addEventListener('submit', async (event) => {
     document.querySelector('#references-table tbody').innerHTML = '';
     for (let i = 0; i < 3; i += 1) { addRow('employment-table'); addRow('references-table'); }
     syncPermanentAddress();
+    syncOtherQualification();
     setStatus(result.message || 'Application submitted. Thank you!', 'ok');
     window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
   } catch {
@@ -326,3 +345,4 @@ form.addEventListener('submit', async (event) => {
 
 restoreDraft();
 syncPermanentAddress();
+syncOtherQualification();

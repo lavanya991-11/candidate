@@ -74,8 +74,10 @@
         <div class="grid grid-name">
           <div class="field">
             <label for="title">Full Name</label>
+            <!-- These match the Candidate Salutation enum in Business Central. -->
             <select id="title" name="title">
-              <option>Mr.</option><option>Ms.</option><option>Mrs.</option><option>Dr.</option><option>Mx.</option>
+              <option value="">Title</option>
+              <option>Mr.</option><option>Mrs.</option><option>Ms.</option><option>Miss</option><option>Dr.</option>
             </select>
           </div>
           <div class="field">
@@ -92,7 +94,7 @@
           </div>
           <div class="field">
             <label for="dateOfBirth">Date of Birth</label>
-            <input id="dateOfBirth" name="dateOfBirth" type="date" />
+            <input id="dateOfBirth" name="dateOfBirth" type="date" required />
           </div>
         </div>
 
@@ -160,7 +162,7 @@
           </h3>
           <div class="field">
             <label for="cur_line1">Door No. / Flat No. / Address 1</label>
-            <input id="cur_line1" name="cur_line1" placeholder="Enter address line 1" maxlength="100" />
+            <input id="cur_line1" name="cur_line1" placeholder="Enter address line 1" maxlength="100" required />
           </div>
           <div class="field">
             <label for="cur_line2">Apartment Name / Street Name / Address 2</label>
@@ -169,7 +171,7 @@
           <div class="grid grid-2">
             <div class="field">
               <label for="cur_city">City</label>
-              <input id="cur_city" name="cur_city" placeholder="City" maxlength="50" />
+              <input id="cur_city" name="cur_city" placeholder="City" maxlength="50" required />
             </div>
             <div class="field">
               <label for="cur_state">State</label>
@@ -177,7 +179,7 @@
             </div>
             <div class="field">
               <label for="cur_pin">Pin Code</label>
-              <input id="cur_pin" name="cur_pin" placeholder="Pin Code" maxlength="20" />
+              <input id="cur_pin" name="cur_pin" placeholder="Pin Code" maxlength="20" required />
             </div>
             <div class="field">
               <label for="cur_country">Country</label>
@@ -244,6 +246,9 @@
               <label><input type="radio" name="qualification" value="Post Graduate" /><span>Post Graduate</span></label>
               <label><input type="radio" name="qualification" value="Other" /><span>Other</span></label>
             </div>
+            <label for="otherQualification" class="sr-only">Please specify</label>
+            <input id="otherQualification" name="otherQualification" maxlength="100"
+                   placeholder="Please specify" hidden />
           </fieldset>
 
           <div class="field">

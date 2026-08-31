@@ -4,12 +4,16 @@ const config = require('../config');
 async function createCandidate(req, res, next) {
   try {
     const saved = await Candidate.create(req.candidate);
-    res.status(201).json({
-      message: config.bc.enabled
-        ? 'Candidate saved to Business Central.'
-        : 'Candidate saved locally (Business Central is not configured).',
-      candidate: saved,
-    });
+
+    // saved.submitted is false when the record reached BC in full but is still a
+    // draft, so the applicant is told it arrived without being promised a status
+    // that the record does not have.
+    const message = config.bc.enabled
+      ? `Application ${saved.submitted === false ? 'received' : 'submitted'}. `
+        + `Your reference number is ${saved.entryNo}.`
+      : 'Application saved locally (Business Central is not configured).';
+
+    res.status(201).json({ message, candidate: saved });
   } catch (err) {
     next(err);
   }
