@@ -61,6 +61,58 @@ table 50100 "Candidate"
             Caption = 'Application Date';
             Editable = false;
         }
+        field(11; "Title"; Text[10])
+        {
+            Caption = 'Title';
+        }
+        field(12; "First Name"; Text[50])
+        {
+            Caption = 'First Name';
+        }
+        field(13; "Middle Name"; Text[50])
+        {
+            Caption = 'Middle Name';
+        }
+        field(14; "Last Name"; Text[50])
+        {
+            Caption = 'Last Name';
+        }
+        field(15; "Date of Birth"; Date)
+        {
+            Caption = 'Date of Birth';
+        }
+        field(16; "Gender"; Text[20])
+        {
+            Caption = 'Gender';
+        }
+        field(17; "Marital Status"; Text[20])
+        {
+            Caption = 'Marital Status';
+        }
+        field(18; "Current Address"; Text[250])
+        {
+            Caption = 'Current Address';
+        }
+        field(19; "Permanent Address"; Text[250])
+        {
+            Caption = 'Permanent Address';
+        }
+        field(20; "English Certification"; Text[10])
+        {
+            Caption = 'English Certification';
+        }
+        field(21; "English Test Date"; Date)
+        {
+            Caption = 'English Test Date';
+        }
+        field(22; "Employment History"; Text[1000])
+        {
+            Caption = 'Employment History';
+        }
+        field(23; "Reference List"; Text[1000])
+        {
+            Caption = 'Reference List';
+        }
     }
 
     keys

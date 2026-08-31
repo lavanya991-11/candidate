@@ -28,6 +28,19 @@ page 50102 "Candidate API"
                 field(skills; Rec."Skills") { }
                 field(positionAppliedFor; Rec."Position Applied For") { }
                 field(interviewDate; Rec."Interview Date") { }
+                field(title; Rec."Title") { }
+                field(firstName; Rec."First Name") { }
+                field(middleName; Rec."Middle Name") { }
+                field(lastName; Rec."Last Name") { }
+                field(dateOfBirth; Rec."Date of Birth") { }
+                field(gender; Rec."Gender") { }
+                field(maritalStatus; Rec."Marital Status") { }
+                field(currentAddress; Rec."Current Address") { }
+                field(permanentAddress; Rec."Permanent Address") { }
+                field(englishCertification; Rec."English Certification") { }
+                field(englishTestDate; Rec."English Test Date") { }
+                field(employmentHistory; Rec."Employment History") { }
+                field(referenceList; Rec."Reference List") { }
                 field(applicationDate; Rec."Application Date") { Editable = false; }
                 field(lastModifiedDateTime; Rec.SystemModifiedAt) { Editable = false; }
             }

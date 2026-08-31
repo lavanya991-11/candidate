@@ -33,6 +33,8 @@ const config = {
     clientSecret: process.env.BC_CLIENT_SECRET,
     username: process.env.BC_USERNAME,
     webServiceKey: process.env.BC_WEB_SERVICE_KEY,
+    // true once the extended AL objects (title, DOB, addresses, ...) are published.
+    extendedSchema: String(process.env.BC_EXTENDED_SCHEMA || '').toLowerCase() === 'true',
     scope: process.env.BC_SCOPE || 'https://api.businesscentral.dynamics.com/.default',
     publisher: process.env.BC_API_PUBLISHER || 'Novasoft',
     group: process.env.BC_API_GROUP || 'Novasoft',
