@@ -7,14 +7,28 @@ const errorHandler = require('./middleware/errorHandler');
 
 const app = express();
 
-// The React app runs on its own origin in development (Vite on :5173), so it needs
-// an explicit CORS allowance. Same-origin requests carry no Origin header and pass.
-app.use(cors({
-  origin(origin, callback) {
-    if (!origin || config.allowedOrigins.includes(origin)) return callback(null, true);
-    callback(new Error(`Origin ${origin} is not allowed`));
-  },
-  methods: ['GET', 'POST', 'OPTIONS'],
+app.set('trust proxy', 1); // Render terminates TLS in front of the app.
+
+// A browser sends an Origin header on every POST, including same-origin ones, so the
+// page this server itself serves must be recognised as its own origin - otherwise the
+// built-in form is blocked wherever it is deployed. ALLOWED_ORIGINS is only needed for
+// a React app served from somewhere else (Vite on :5173 in development).
+function isSameOrigin(req, origin) {
+  try {
+    return new URL(origin).host === req.headers.host;
+  } catch {
+    return false;
+  }
+}
+
+app.use(cors((req, callback) => {
+  const origin = req.headers.origin;
+  const allowed = !origin || isSameOrigin(req, origin) || config.allowedOrigins.includes(origin);
+
+  if (!allowed) {
+    return callback(new Error(`Origin ${origin} is not allowed`));
+  }
+  callback(null, { origin: true, methods: ['GET', 'POST', 'OPTIONS'] });
 }));
 
 app.use(express.json({ limit: '100kb' }));
