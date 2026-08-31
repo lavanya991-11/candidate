@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Candidate Application Form</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <main class="card">
+    <header>
+      <h1>Candidate Application</h1>
+      <p class="sub">Your details are recorded in Business Central.</p>
+    </header>
+
+    <form id="candidate-form" novalidate>
+      <div class="grid">
+        <label>
+          <span>Candidate Name <em>*</em></span>
+          <input name="candidateName" maxlength="100" required autocomplete="name" />
+        </label>
+
+        <label>
+          <span>Email <em>*</em></span>
+          <input name="email" type="email" maxlength="80" required autocomplete="email" />
+        </label>
+
+        <label>
+          <span>Phone Number <em>*</em></span>
+          <input name="phoneNo" type="tel" maxlength="30" required autocomplete="tel" />
+        </label>
+
+        <label>
+          <span>Position Applied For <em>*</em></span>
+          <input name="positionAppliedFor" maxlength="100" required />
+        </label>
+
+        <label class="full">
+          <span>Education</span>
+          <textarea name="education" maxlength="250" rows="2"
+                    placeholder="e.g. B.Tech Computer Science, 2021"></textarea>
+        </label>
+
+        <label class="full">
+          <span>Experience</span>
+          <textarea name="experience" maxlength="250" rows="2"
+                    placeholder="e.g. 3 years as a backend developer"></textarea>
+        </label>
+
+        <label class="full">
+          <span>Skills</span>
+          <textarea name="skills" maxlength="250" rows="2"
+                    placeholder="e.g. Node.js, SQL, AL, Power BI"></textarea>
+        </label>
+
+        <label>
+          <span>Interview Date</span>
+          <input name="interviewDate" type="date" />
+        </label>
+      </div>
+
+      <button type="submit" id="submit-btn">Submit Application</button>
+      <p id="status" role="status"></p>
+    </form>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>

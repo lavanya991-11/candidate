@@ -1,0 +1,30 @@
+services:
+  - type: web
+    name: candidate-form
+    runtime: node
+    plan: free
+    buildCommand: npm ci
+    startCommand: npm start
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: BC_BASE_URL
+        value: https://api.businesscentral.dynamics.com
+      - key: BC_ENVIRONMENT
+        value: Delivery_App
+      - key: BC_API_PATH
+        value: api/Novasoft/Novasoft/v2.0
+      - key: BC_SCOPE
+        value: https://api.businesscentral.dynamics.com/.default
+      # sync: false = set by hand in the Render dashboard, never stored in git.
+      - key: BC_TENANT_ID
+        sync: false
+      - key: BC_COMPANY_ID
+        sync: false
+      - key: BC_CLIENT_ID
+        sync: false
+      - key: BC_CLIENT_SECRET
+        sync: false
+      - key: ALLOWED_ORIGINS
+        sync: false

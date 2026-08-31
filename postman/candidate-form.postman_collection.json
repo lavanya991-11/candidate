@@ -1,0 +1,308 @@
+{
+  "info": {
+    "name": "Candidate Form - Node API + Business Central",
+    "description": "Two folders:\n\n1. **Node App** - the Express endpoints in this repo (http://localhost:{{port}}).\n2. **Business Central (direct)** - the BC API page 50102 endpoint, called straight from Postman. Run *Get Access Token* first; it stores {{bc_access_token}} automatically.\n\nImport candidate-form.postman_environment.json and fill in the values before running.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "base_url", "value": "http://localhost:5000" }
+  ],
+  "item": [
+    {
+      "name": "Node App",
+      "item": [
+        {
+          "name": "Health",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{base_url}}/health", "host": ["{{base_url}}"], "path": ["health"] },
+            "description": "Returns status and whether Business Central is configured or the app is in local-file mode."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "pm.test('status is ok', () => pm.expect(pm.response.json().status).to.eql('ok'));",
+                  "console.log('Business Central:', pm.response.json().businessCentral);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create Candidate",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "options": { "raw": { "language": "json" } },
+              "raw": "{\n  \"candidateName\": \"Asha Rao\",\n  \"email\": \"asha.rao@example.com\",\n  \"phoneNo\": \"+91 9876543210\",\n  \"education\": \"B.Tech Computer Science, 2021\",\n  \"experience\": \"3 years as a backend developer\",\n  \"skills\": \"Node.js, SQL, AL, Power BI\",\n  \"positionAppliedFor\": \"Backend Developer\",\n  \"interviewDate\": \"2026-09-10\"\n}"
+            },
+            "url": { "raw": "{{base_url}}/api/candidates", "host": ["{{base_url}}"], "path": ["api", "candidates"] },
+            "description": "Validates the payload and creates the candidate in Business Central (or in data/candidates.json when BC is not configured).\n\nRequired: candidateName, email, phoneNo, positionAppliedFor.\nOptional: education, experience, skills, interviewDate (YYYY-MM-DD)."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('201 Created', () => pm.response.to.have.status(201));",
+                  "const body = pm.response.json();",
+                  "pm.test('returns the candidate', () => pm.expect(body.candidate).to.be.an('object'));",
+                  "if (body.candidate && body.candidate.id) {",
+                  "  pm.collectionVariables.set('candidate_id', body.candidate.id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create Candidate - validation error (400)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "options": { "raw": { "language": "json" } },
+              "raw": "{\n  \"candidateName\": \"\",\n  \"email\": \"not-an-email\",\n  \"phoneNo\": \"12\"\n}"
+            },
+            "url": { "raw": "{{base_url}}/api/candidates", "host": ["{{base_url}}"], "path": ["api", "candidates"] },
+            "description": "Shows the validation response shape: { error, details: [ ... ] }."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('400 Bad Request', () => pm.response.to.have.status(400));",
+                  "pm.test('lists field errors', () => pm.expect(pm.response.json().details).to.be.an('array').that.is.not.empty);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List Candidates",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{base_url}}/api/candidates", "host": ["{{base_url}}"], "path": ["api", "candidates"] },
+            "description": "Latest 100 candidates, newest first, as { value: [ ... ] }."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "pm.test('returns a value array', () => pm.expect(pm.response.json().value).to.be.an('array'));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Business Central (direct)",
+      "item": [
+        {
+          "name": "1. Get Access Token",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/x-www-form-urlencoded" }],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                { "key": "grant_type", "value": "client_credentials" },
+                { "key": "client_id", "value": "{{bc_client_id}}" },
+                { "key": "client_secret", "value": "{{bc_client_secret}}" },
+                { "key": "scope", "value": "{{bc_scope}}" }
+              ]
+            },
+            "url": {
+              "raw": "https://login.microsoftonline.com/{{bc_tenant_id}}/oauth2/v2.0/token",
+              "protocol": "https",
+              "host": ["login", "microsoftonline", "com"],
+              "path": ["{{bc_tenant_id}}", "oauth2", "v2.0", "token"]
+            },
+            "description": "Entra ID client-credentials (service-to-service) flow - the same call config/bcClient.js makes. Saves the token to {{bc_access_token}} for every other request in this folder."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "if (body.access_token) {",
+                  "  pm.environment.set('bc_access_token', body.access_token);",
+                  "  console.log('Token saved, expires in', body.expires_in, 'seconds');",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "2. List Companies (find bc_company_id)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{bc_access_token}}" }],
+            "url": {
+              "raw": "{{bc_base_url}}/v2.0/{{bc_tenant_id}}/{{bc_environment}}/api/v2.0/companies",
+              "host": ["{{bc_base_url}}"],
+              "path": ["v2.0", "{{bc_tenant_id}}", "{{bc_environment}}", "api", "v2.0", "companies"]
+            },
+            "description": "Standard BC API. Copy the id of your company into bc_company_id and into BC_COMPANY_ID in .env."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "const rows = pm.response.json().value || [];",
+                  "rows.forEach(c => console.log(c.name, '->', c.id));",
+                  "if (rows.length === 1) pm.environment.set('bc_company_id', rows[0].id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "3. Create Candidate (BC)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{bc_access_token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "options": { "raw": { "language": "json" } },
+              "raw": "{\n  \"candidateName\": \"Asha Rao\",\n  \"email\": \"asha.rao@example.com\",\n  \"phoneNo\": \"+91 9876543210\",\n  \"education\": \"B.Tech Computer Science, 2021\",\n  \"experience\": \"3 years as a backend developer\",\n  \"skills\": \"Node.js, SQL, AL, Power BI\",\n  \"positionAppliedFor\": \"Backend Developer\",\n  \"interviewDate\": \"2026-09-10\"\n}"
+            },
+            "url": {
+              "raw": "{{bc_base_url}}/v2.0/{{bc_tenant_id}}/{{bc_environment}}/api/{{bc_api_publisher}}/{{bc_api_group}}/{{bc_api_version}}/companies({{bc_company_id}})/candidates",
+              "host": ["{{bc_base_url}}"],
+              "path": ["v2.0", "{{bc_tenant_id}}", "{{bc_environment}}", "api", "{{bc_api_publisher}}", "{{bc_api_group}}", "{{bc_api_version}}", "companies({{bc_company_id}})", "candidates"]
+            },
+            "description": "The exact call models/candidate.js makes against API page 50102. entryNo and applicationDate are read-only - BC assigns them."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('201 Created', () => pm.response.to.have.status(201));",
+                  "const body = pm.response.json();",
+                  "if (body.id) pm.environment.set('bc_candidate_id', body.id);",
+                  "if (body['@odata.etag']) pm.environment.set('bc_candidate_etag', body['@odata.etag']);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "4. List Candidates (BC)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{bc_access_token}}" }],
+            "url": {
+              "raw": "{{bc_base_url}}/v2.0/{{bc_tenant_id}}/{{bc_environment}}/api/{{bc_api_publisher}}/{{bc_api_group}}/{{bc_api_version}}/companies({{bc_company_id}})/candidates?$orderby=entryNo desc&$top=20",
+              "host": ["{{bc_base_url}}"],
+              "path": ["v2.0", "{{bc_tenant_id}}", "{{bc_environment}}", "api", "{{bc_api_publisher}}", "{{bc_api_group}}", "{{bc_api_version}}", "companies({{bc_company_id}})", "candidates"],
+              "query": [
+                { "key": "$orderby", "value": "entryNo desc" },
+                { "key": "$top", "value": "20" },
+                { "key": "$filter", "value": "positionAppliedFor eq 'Backend Developer'", "disabled": true }
+              ]
+            },
+            "description": "Custom API page 50102. Enable the $filter query param to try OData filtering."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "const rows = pm.response.json().value || [];",
+                  "if (rows.length) {",
+                  "  pm.environment.set('bc_candidate_id', rows[0].id);",
+                  "  if (rows[0]['@odata.etag']) pm.environment.set('bc_candidate_etag', rows[0]['@odata.etag']);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "5. Get Candidate by id (BC)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{bc_access_token}}" }],
+            "url": {
+              "raw": "{{bc_base_url}}/v2.0/{{bc_tenant_id}}/{{bc_environment}}/api/{{bc_api_publisher}}/{{bc_api_group}}/{{bc_api_version}}/companies({{bc_company_id}})/candidates({{bc_candidate_id}})",
+              "host": ["{{bc_base_url}}"],
+              "path": ["v2.0", "{{bc_tenant_id}}", "{{bc_environment}}", "api", "{{bc_api_publisher}}", "{{bc_api_group}}", "{{bc_api_version}}", "companies({{bc_company_id}})", "candidates({{bc_candidate_id}})"]
+            },
+            "description": "The key is the record SystemId (ODataKeyFields on page 50102), not the Entry No."
+          }
+        },
+        {
+          "name": "6. Update Candidate (BC)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{bc_access_token}}" },
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "If-Match", "value": "{{bc_candidate_etag}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "options": { "raw": { "language": "json" } },
+              "raw": "{\n  \"interviewDate\": \"2026-09-15\"\n}"
+            },
+            "url": {
+              "raw": "{{bc_base_url}}/v2.0/{{bc_tenant_id}}/{{bc_environment}}/api/{{bc_api_publisher}}/{{bc_api_group}}/{{bc_api_version}}/companies({{bc_company_id}})/candidates({{bc_candidate_id}})",
+              "host": ["{{bc_base_url}}"],
+              "path": ["v2.0", "{{bc_tenant_id}}", "{{bc_environment}}", "api", "{{bc_api_publisher}}", "{{bc_api_group}}", "{{bc_api_version}}", "companies({{bc_company_id}})", "candidates({{bc_candidate_id}})"]
+            },
+            "description": "BC requires an If-Match ETag on PATCH and DELETE. Send * to skip the concurrency check."
+          }
+        },
+        {
+          "name": "7. Delete Candidate (BC)",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{bc_access_token}}" },
+              { "key": "If-Match", "value": "{{bc_candidate_etag}}" }
+            ],
+            "url": {
+              "raw": "{{bc_base_url}}/v2.0/{{bc_tenant_id}}/{{bc_environment}}/api/{{bc_api_publisher}}/{{bc_api_group}}/{{bc_api_version}}/companies({{bc_company_id}})/candidates({{bc_candidate_id}})",
+              "host": ["{{bc_base_url}}"],
+              "path": ["v2.0", "{{bc_tenant_id}}", "{{bc_environment}}", "api", "{{bc_api_publisher}}", "{{bc_api_group}}", "{{bc_api_version}}", "companies({{bc_company_id}})", "candidates({{bc_candidate_id}})"]
+            },
+            "description": "Returns 204 No Content on success."
+          }
+        }
+      ]
+    }
+  ]
+}
