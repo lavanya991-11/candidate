@@ -200,6 +200,7 @@ input.invalid, select.invalid { border-color: var(--err); background: #fef4f4; }
 .file-list { list-style: none; margin: 10px 0 0; padding: 0; display: grid; gap: 4px; }
 .file-list li { font-size: 12px; color: var(--ink); }
 .file-list li span { color: var(--muted); }
+.file-list li span.file-bad { color: var(--danger, #c62828); font-weight: 600; }
 
 /* ── tables ───────────────────────────────────────────── */
 .table-label { display: block; margin-bottom: 8px; }

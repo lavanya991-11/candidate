@@ -134,6 +134,26 @@ async function postLines(candidateId, candidate) {
   }
 }
 
+// Each attached file is two calls: the line carries the name and the section it came
+// from, then the bytes go to the stream property the Blob is published as. The table
+// validates the file name, so an unsupported extension is refused by BC as well.
+async function postAttachments(entryNo, files = []) {
+  for (const file of files) {
+    const line = await bcClient.request('post', 'candidateAttachments', {
+      data: {
+        candidateEntryNo: entryNo,
+        attachmentType: file.attachmentType,
+        fileName: clip(file.originalname, 250),
+      },
+    });
+    await bcClient.putStream(
+      `candidateAttachments(${line.id})/attachmentContent`,
+      file.buffer,
+      file.mimetype,
+    );
+  }
+}
+
 // Once everything is in place the bound action moves the application out of Draft.
 // It re-checks the mandatory fields server side, so this is also the point where a
 // gap between the form's rules and the table's rules would surface.
@@ -145,11 +165,12 @@ async function createInBc(candidate) {
   const created = await bcClient.request('post', 'candidates', { data: candidatePayload(candidate) });
   const { id } = created;
 
-  // The candidate row already exists from here on. If a line fails, say so plainly
-  // instead of letting it read as "nothing was saved" - the application is in
+  // The candidate row already exists from here on. If a line or a file fails, say so
+  // plainly instead of letting it read as "nothing was saved" - the application is in
   // Business Central as a draft and can be completed there.
   try {
     await postLines(id, candidate);
+    await postAttachments(created.entryNo, candidate.attachments);
   } catch (err) {
     err.partialSave = { id, entryNo: created.entryNo };
     throw err;
@@ -191,12 +212,16 @@ async function writeLocal(rows) {
 async function create(candidate) {
   if (config.bc.enabled) return createInBc(candidate);
 
-  // Local mode keeps the full structure - it is not limited by the BC table.
+  // Local mode keeps the full structure - it is not limited by the BC table. Files are
+  // recorded by name only: the JSON store is a stand-in for BC, not a file store.
   const rows = await readLocal();
   const row = {
     id: String(Date.now()),
     entryNo: rows.length + 1,
     ...candidate,
+    attachments: (candidate.attachments || []).map((f) => ({
+      attachmentType: f.attachmentType, fileName: f.originalname, size: f.size,
+    })),
     applicationStatus: 'Submitted',
     applicationDate: new Date().toISOString().slice(0, 10),
   };

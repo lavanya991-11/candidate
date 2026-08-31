@@ -65,17 +65,20 @@ function apiUrl(path = '') {
   return segments.filter(Boolean).join('/');
 }
 
-async function send(method, path, { data, params } = {}) {
+async function send(method, path, { data, params, contentType, headers } = {}) {
   return axios({
     method,
     url: apiUrl(path),
     data,
     params,
-    timeout: 30_000,
+    // A file goes up in one request, so it gets longer than the JSON calls do.
+    timeout: contentType ? 120_000 : 30_000,
+    maxBodyLength: Infinity,
     headers: {
       Authorization: await authorizationHeader(),
-      'Content-Type': 'application/json',
+      'Content-Type': contentType || 'application/json',
       Accept: 'application/json',
+      ...headers,
     },
   });
 }
@@ -95,4 +98,22 @@ async function request(method, path, options = {}) {
   }
 }
 
-module.exports = { request, apiUrl, getAccessToken, authorizationHeader };
+// A Blob on an API page is published as an OData stream property, so its content is
+// written as raw bytes to the property's own URL rather than as a JSON value. BC
+// requires a concurrency header on that write; the line was just created here, so
+// there is no other version to lose and "*" is the honest match.
+//
+// The connection is closed afterwards rather than returned to the keep-alive pool.
+// Node reuses sockets by default, and after this upload the next request on the same
+// socket fails to parse the response it reads back.
+function putStream(path, buffer, mimeType) {
+  return request('patch', path, {
+    data: buffer,
+    contentType: mimeType || 'application/octet-stream',
+    headers: { 'If-Match': '*', Connection: 'close' },
+  });
+}
+
+module.exports = {
+  request, putStream, apiUrl, getAccessToken, authorizationHeader,
+};

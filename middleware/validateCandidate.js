@@ -142,6 +142,9 @@ function validateCandidate(req, res, next) {
     return res.status(400).json({ error: 'Validation failed', code: 'VALIDATION_FAILED', details: errors });
   }
 
+  // Attached files were parsed out of the multipart body before validation.
+  candidate.attachments = req.attachments || [];
+
   req.candidate = candidate;
   next();
 }

@@ -249,7 +249,50 @@ ADDRESS_PAIRS.forEach(([from]) => {
   form.elements[from].addEventListener('change', syncPermanentAddress);
 });
 
-// File pickers: selection is shown, but nothing is uploaded yet - see README.
+/* ── attachments ────────────────────────────────────────────────── */
+// Business Central stores these in a Blob and refuses anything else, so the same
+// limits are applied here rather than letting a file fail after it has been uploaded.
+const MAX_FILE_MB = 10;
+const ALLOWED_TYPES = ['application/pdf', 'image/jpeg', 'image/png'];
+
+const fileProblem = (file) => {
+  if (!ALLOWED_TYPES.includes(file.type)) return 'must be a PDF, JPG or PNG';
+  if (file.size > MAX_FILE_MB * 1024 * 1024) return `is larger than ${MAX_FILE_MB} MB`;
+  return '';
+};
+
+function attachmentZones() {
+  return [...document.querySelectorAll('[data-dropzone]')];
+}
+
+function attachmentErrors() {
+  return attachmentZones().flatMap((zone) => (
+    [...(zone.querySelector('input[type="file"]').files || [])]
+      .map((file) => (fileProblem(file) ? `${file.name} ${fileProblem(file)}` : ''))
+      .filter(Boolean)
+  ));
+}
+
+// Files travel with the application in one multipart request, each under the field
+// name of the section it was attached to. The browser sets the boundary itself, so
+// the request must not carry a Content-Type of its own.
+function buildSubmission() {
+  const data = new FormData();
+  data.append('payload', JSON.stringify(collect()));
+  attachmentZones().forEach((zone) => {
+    [...(zone.querySelector('input[type="file"]').files || [])]
+      .forEach((file) => data.append(zone.dataset.attachmentType, file));
+  });
+  return data;
+}
+
+function clearAttachments() {
+  attachmentZones().forEach((zone) => {
+    zone.querySelector('input[type="file"]').value = '';
+    zone.querySelector('.file-list').innerHTML = '';
+  });
+}
+
 document.querySelectorAll('[data-dropzone]').forEach((zone) => {
   const input = zone.querySelector('input[type="file"]');
   const list = zone.querySelector('.file-list');
@@ -259,7 +302,10 @@ document.querySelectorAll('[data-dropzone]').forEach((zone) => {
     [...files].forEach((file) => {
       const li = document.createElement('li');
       const kb = Math.max(1, Math.round(file.size / 1024));
-      li.innerHTML = `${file.name} <span>(${kb} KB — not uploaded yet)</span>`;
+      const problem = fileProblem(file);
+      li.innerHTML = problem
+        ? `${file.name} <span class="file-bad">(${problem})</span>`
+        : `${file.name} <span>(${kb} KB)</span>`;
       list.appendChild(li);
     });
   };
@@ -310,14 +356,20 @@ form.addEventListener('submit', async (event) => {
     return;
   }
 
+  const badFiles = attachmentErrors();
+  if (badFiles.length) {
+    setErrors(badFiles);
+    setStatus('Please remove or replace the files listed below.', 'err');
+    return;
+  }
+
   submitBtn.disabled = true;
   setStatus('Submitting your application…');
 
   try {
     const response = await fetch('/api/candidates', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(collect()),
+      body: buildSubmission(),
     });
     const result = await response.json();
 
@@ -332,6 +384,7 @@ form.addEventListener('submit', async (event) => {
     document.querySelector('#employment-table tbody').innerHTML = '';
     document.querySelector('#references-table tbody').innerHTML = '';
     for (let i = 0; i < 3; i += 1) { addRow('employment-table'); addRow('references-table'); }
+    clearAttachments();
     syncPermanentAddress();
     syncOtherQualification();
     setStatus(result.message || 'Application submitted. Thank you!', 'ok');
