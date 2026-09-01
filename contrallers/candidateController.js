@@ -14,7 +14,7 @@ async function createCandidate(req, res, next) {
         + `Your reference number is ${saved.entryNo}.`
       : 'Application saved locally (Business Central is not configured).';
 
-    await mailer.sendApplicationConfirmation(req.candidate, saved);
+    await mailer.sendApplicationConfirmation(req.candidate);
 
     res.status(201).json({ message, candidate: saved });
   } catch (err) {
