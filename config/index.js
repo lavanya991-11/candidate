@@ -18,6 +18,16 @@ const allowedOrigins = (process.env.ALLOWED_ORIGINS ||
 const config = {
   port: Number(process.env.PORT) || 3000,
   allowedOrigins,
+  mail: {
+    host: process.env.SMTP_HOST,
+    port: Number(process.env.SMTP_PORT) || 587,
+    // Port 465 is implicit TLS; anything else (587, 25) starts in plain text and
+    // upgrades via STARTTLS, which is what SMTP_SECURE=false tells nodemailer to expect.
+    secure: process.env.SMTP_SECURE ? process.env.SMTP_SECURE === 'true' : Number(process.env.SMTP_PORT) === 465,
+    user: process.env.SMTP_USER,
+    pass: process.env.SMTP_PASS,
+    from: process.env.MAIL_FROM || process.env.SMTP_USER,
+  },
   bc: {
     authMode,
     deployment,
@@ -46,7 +56,11 @@ config.bc.apiPath = (
   `api/${config.bc.publisher}/${config.bc.group}/${config.bc.version}`
 ).replace(/^\/+|\/+$/g, '');
 
-const { bc } = config;
+const { bc, mail } = config;
+
+// Without SMTP credentials the app still runs and simply skips sending the
+// confirmation email, the same way it falls back to local-file mode without BC.
+mail.enabled = Boolean(mail.host && mail.user && mail.pass);
 
 // Until the settings for the chosen auth mode are all present, the app writes to a
 // local JSON file instead, so the form stays usable while BC access is being arranged.

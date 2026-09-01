@@ -1,5 +1,6 @@
 const Candidate = require('../models/candidate');
 const config = require('../config');
+const mailer = require('../services/mailer');
 
 async function createCandidate(req, res, next) {
   try {
@@ -12,6 +13,8 @@ async function createCandidate(req, res, next) {
       ? `Application ${saved.submitted === false ? 'received' : 'submitted'}. `
         + `Your reference number is ${saved.entryNo}.`
       : 'Application saved locally (Business Central is not configured).';
+
+    await mailer.sendApplicationConfirmation(req.candidate, saved);
 
     res.status(201).json({ message, candidate: saved });
   } catch (err) {
