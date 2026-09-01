@@ -289,12 +289,21 @@ function clearAttachments() {
   attachmentZones().forEach((zone) => {
     zone.querySelector('input[type="file"]').value = '';
     zone.querySelector('.file-list').innerHTML = '';
+    const preview = zone.querySelector('.photo-preview');
+    const placeholder = zone.querySelector('.photo-placeholder');
+    if (preview) {
+      preview.hidden = true;
+      preview.removeAttribute('src');
+      placeholder.hidden = false;
+    }
   });
 }
 
 document.querySelectorAll('[data-dropzone]').forEach((zone) => {
   const input = zone.querySelector('input[type="file"]');
   const list = zone.querySelector('.file-list');
+  const preview = zone.querySelector('.photo-preview');
+  const placeholder = zone.querySelector('.photo-placeholder');
   const allowed = allowedTypesFor(zone);
 
   const show = (files) => {
@@ -308,6 +317,15 @@ document.querySelectorAll('[data-dropzone]').forEach((zone) => {
         : `${file.name} <span>(${kb} KB)</span>`;
       list.appendChild(li);
     });
+
+    if (preview) {
+      const [file] = files;
+      const showPreview = file && !fileProblem(file, allowed);
+      if (showPreview) preview.src = URL.createObjectURL(file);
+      else preview.removeAttribute('src');
+      preview.hidden = !showPreview;
+      placeholder.hidden = showPreview;
+    }
   };
 
   zone.querySelector('.btn-browse').addEventListener('click', () => input.click());
