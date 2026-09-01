@@ -12,14 +12,19 @@
   <!-- ───────────────────────── sidebar ───────────────────────── -->
   <aside class="sidebar">
     <div class="brand">
-      <div class="brand-icon" aria-hidden="true">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-          <rect x="2" y="7" width="20" height="14" rx="2" />
-          <path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-        </svg>
+      <div class="photo-drop" data-dropzone data-attachment-type="Photo">
+        <div class="photo-frame" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+            <circle cx="12" cy="8" r="4" />
+            <path d="M4 20c0-4 4-6 8-6s8 2 8 6" />
+          </svg>
+        </div>
+        <p>Add Candidate Photo</p>
+        <button type="button" class="btn btn-browse">Browse</button>
+        <small>JPG or PNG (Max. 10MB)</small>
+        <input type="file" accept=".jpg,.jpeg,.png" hidden />
+        <ul class="file-list"></ul>
       </div>
-      <h2>Job Application</h2>
-      <p>We're excited to know you</p>
     </div>
 
     <nav class="steps" aria-label="Form sections">

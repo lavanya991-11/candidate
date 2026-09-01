@@ -245,9 +245,16 @@ ADDRESS_PAIRS.forEach(([from]) => {
 // limits are applied here rather than letting a file fail after it has been uploaded.
 const MAX_FILE_MB = 10;
 const ALLOWED_TYPES = ['application/pdf', 'image/jpeg', 'image/png'];
+const IMAGE_TYPES = ['image/jpeg', 'image/png'];
 
-const fileProblem = (file) => {
-  if (!ALLOWED_TYPES.includes(file.type)) return 'must be a PDF, JPG or PNG';
+const allowedTypesFor = (zone) => (
+  zone.dataset.attachmentType === 'Photo' ? IMAGE_TYPES : ALLOWED_TYPES
+);
+
+const fileProblem = (file, allowed) => {
+  if (!allowed.includes(file.type)) {
+    return allowed === IMAGE_TYPES ? 'must be a JPG or PNG' : 'must be a PDF, JPG or PNG';
+  }
   if (file.size > MAX_FILE_MB * 1024 * 1024) return `is larger than ${MAX_FILE_MB} MB`;
   return '';
 };
@@ -257,11 +264,12 @@ function attachmentZones() {
 }
 
 function attachmentErrors() {
-  return attachmentZones().flatMap((zone) => (
-    [...(zone.querySelector('input[type="file"]').files || [])]
-      .map((file) => (fileProblem(file) ? `${file.name} ${fileProblem(file)}` : ''))
-      .filter(Boolean)
-  ));
+  return attachmentZones().flatMap((zone) => {
+    const allowed = allowedTypesFor(zone);
+    return [...(zone.querySelector('input[type="file"]').files || [])]
+      .map((file) => (fileProblem(file, allowed) ? `${file.name} ${fileProblem(file, allowed)}` : ''))
+      .filter(Boolean);
+  });
 }
 
 // Files travel with the application in one multipart request, each under the field
@@ -287,13 +295,14 @@ function clearAttachments() {
 document.querySelectorAll('[data-dropzone]').forEach((zone) => {
   const input = zone.querySelector('input[type="file"]');
   const list = zone.querySelector('.file-list');
+  const allowed = allowedTypesFor(zone);
 
   const show = (files) => {
     list.innerHTML = '';
     [...files].forEach((file) => {
       const li = document.createElement('li');
       const kb = Math.max(1, Math.round(file.size / 1024));
-      const problem = fileProblem(file);
+      const problem = fileProblem(file, allowed);
       li.innerHTML = problem
         ? `${file.name} <span class="file-bad">(${problem})</span>`
         : `${file.name} <span>(${kb} KB)</span>`;

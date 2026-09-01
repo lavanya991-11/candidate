@@ -12,7 +12,10 @@ const ALLOWED = {
 
 // Each dropzone posts under its own field name, which is also the Candidate Attachment
 // Type enum member the file is filed under in BC.
-const FIELDS = ['Education', 'Registration', 'Experience'];
+const FIELDS = ['Education', 'Registration', 'Experience', 'Photo'];
+
+// The candidate photo is one file, unlike the other sections which accept a batch.
+const MAX_COUNTS = { Photo: 1 };
 
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -26,7 +29,9 @@ const upload = multer({
   },
 });
 
-const acceptAttachments = upload.fields(FIELDS.map((name) => ({ name, maxCount: MAX_FILES })));
+const acceptAttachments = upload.fields(
+  FIELDS.map((name) => ({ name, maxCount: MAX_COUNTS[name] || MAX_FILES })),
+);
 
 // The form posts as multipart so the files travel with the application in one request.
 // The application itself rides along as a JSON string, which is unpacked here so that

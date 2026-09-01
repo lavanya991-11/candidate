@@ -52,14 +52,16 @@ svg { width: 18px; height: 18px; flex: none; stroke-linecap: round; stroke-linej
   padding: 20px 16px;
   text-align: center;
 }
-.brand-icon {
-  width: 42px; height: 42px; margin: 0 auto 10px;
+.photo-frame {
+  width: 64px; height: 64px; margin: 0 auto 10px;
   display: grid; place-items: center;
-  border-radius: 10px; background: var(--blue-soft); color: var(--blue);
+  border-radius: 50%; background: var(--blue-soft); color: var(--blue);
 }
-.brand-icon svg { width: 22px; height: 22px; }
-.brand h2 { margin: 0; font-size: 16px; }
-.brand p { margin: 4px 0 0; font-size: 12px; color: var(--muted); }
+.photo-frame svg { width: 30px; height: 30px; }
+.photo-drop p { margin: 0 0 8px; font-size: 13px; font-weight: 600; }
+.photo-drop.is-over .photo-frame { background: var(--blue); color: #fff; }
+.photo-drop small { display: block; margin-top: 6px; font-size: 11px; color: var(--muted); }
+.photo-drop .file-list { text-align: left; }
 
 .steps {
   background: var(--panel);
