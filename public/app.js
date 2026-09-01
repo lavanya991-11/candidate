@@ -130,15 +130,6 @@ function syncPermanentAddress() {
 }
 
 /* ── draft handling ─────────────────────────────────────────────── */
-function saveDraft() {
-  try {
-    localStorage.setItem(DRAFT_KEY, JSON.stringify(collect()));
-    return true;
-  } catch {
-    return false;
-  }
-}
-
 function restoreDraft() {
   let draft;
   try {
@@ -320,16 +311,6 @@ document.querySelectorAll('[data-dropzone]').forEach((zone) => {
     input.files = e.dataTransfer.files;
     show(input.files);
   });
-});
-
-document.getElementById('save-draft').addEventListener('click', () => {
-  setErrors([]);
-  setStatus(
-    saveDraft()
-      ? 'Draft saved in this browser. Reopen this page on this device to continue.'
-      : 'Could not save the draft in this browser.',
-    saveDraft() ? 'ok' : 'err'
-  );
 });
 
 // Sidebar highlight follows the section in view.
