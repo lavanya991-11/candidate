@@ -134,6 +134,11 @@ async function postLines(candidateId, candidate) {
   }
 }
 
+// The Candidate Attachment Type enum in BC only has Other/Education/Registration/
+// Experience - there is no Photo member - so the candidate's photo is filed under
+// Other, the closest fit, rather than BC rejecting the whole submission outright.
+const ATTACHMENT_TYPE_TO_BC = { Photo: 'Other' };
+
 // Each attached file is two calls: the line carries the name and the section it came
 // from, then the bytes go to the stream property the Blob is published as. The table
 // validates the file name, so an unsupported extension is refused by BC as well.
@@ -142,7 +147,7 @@ async function postAttachments(entryNo, files = []) {
     const line = await bcClient.request('post', 'candidateAttachments', {
       data: {
         candidateEntryNo: entryNo,
-        attachmentType: file.attachmentType,
+        attachmentType: ATTACHMENT_TYPE_TO_BC[file.attachmentType] || file.attachmentType,
         fileName: clip(file.originalname, 250),
       },
     });
