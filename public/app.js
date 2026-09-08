@@ -305,11 +305,14 @@ const allowedTypesFor = (zone) => (
   zone.dataset.attachmentType === 'Photo' ? IMAGE_TYPES : ALLOWED_TYPES
 );
 
-const fileProblem = (file, allowed) => {
+const fileProblem = (file, allowed, beforeShrinking = false) => {
   if (!allowed.includes(file.type)) {
     return allowed === IMAGE_TYPES ? 'must be a JPG or PNG' : 'must be a PDF, JPG or PNG';
   }
-  if (file.size > MAX_FILE_MB * 1024 * 1024) return `is larger than ${MAX_FILE_MB} MB`;
+  // While the file is still the one that was picked, an image that is over the limit
+  // is left alone: it is scaled down on submission and only then has to fit.
+  const exempt = beforeShrinking && IMAGE_TYPES.includes(file.type);
+  if (!exempt && file.size > MAX_FILE_MB * 1024 * 1024) return `is larger than ${MAX_FILE_MB} MB`;
   return '';
 };
 
@@ -317,24 +320,79 @@ function attachmentZones() {
   return [...document.querySelectorAll('[data-dropzone]')];
 }
 
-function attachmentErrors() {
-  return attachmentZones().flatMap((zone) => {
+function attachmentErrors(prepared) {
+  return prepared.flatMap(({ zone, files }) => {
     const allowed = allowedTypesFor(zone);
-    return [...(zone.querySelector('input[type="file"]').files || [])]
+    return files
       .map((file) => (fileProblem(file, allowed) ? `${file.name} ${fileProblem(file, allowed)}` : ''))
       .filter(Boolean);
   });
 }
 
+// Most of the wait on a submission is the files. Each one crosses the wire twice -
+// browser to the server, then on to Business Central, where an image travels as
+// base64 and is a third larger again. A photo straight off a phone is several
+// megabytes of detail that nothing downstream ever shows, so it is scaled down
+// before it is sent. PDFs go up untouched, and so does anything already small.
+const IMAGE_BUDGET = {
+  // The candidate picture is only ever displayed small.
+  Photo: { maxEdge: 800, type: 'image/jpeg', quality: 0.85 },
+  // A certificate has to stay readable, so it keeps its own format and only the
+  // outsized ones are scaled. 2000px is roughly 200 dpi across an A4 page.
+  default: { maxEdge: 2000, quality: 0.9 },
+};
+const SHRINK_ABOVE_BYTES = 512 * 1024;
+
+const canvasBlob = (canvas, type, quality) => new Promise((resolve) => {
+  canvas.toBlob(resolve, type, quality);
+});
+
+async function shrinkImage(file, attachmentType) {
+  if (!IMAGE_TYPES.includes(file.type) || file.size <= SHRINK_ABOVE_BYTES) return file;
+
+  const budget = IMAGE_BUDGET[attachmentType] || IMAGE_BUDGET.default;
+  const outType = budget.type || file.type;
+
+  try {
+    const bitmap = await createImageBitmap(file);
+    const scale = Math.min(1, budget.maxEdge / Math.max(bitmap.width, bitmap.height));
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.round(bitmap.width * scale);
+    canvas.height = Math.round(bitmap.height * scale);
+    canvas.getContext('2d').drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+    bitmap.close();
+
+    const blob = await canvasBlob(canvas, outType, budget.quality);
+    // Re-encoding is not always a saving: a small PNG can come back larger.
+    if (!blob || blob.size >= file.size) return file;
+
+    const dot = file.name.lastIndexOf('.');
+    const stem = dot > 0 ? file.name.slice(0, dot) : file.name;
+    const name = `${stem}${outType === 'image/png' ? '.png' : '.jpg'}`;
+    return new File([blob], name, { type: outType, lastModified: file.lastModified });
+  } catch {
+    // An image the browser cannot decode is sent as it is rather than lost.
+    return file;
+  }
+}
+
+async function prepareAttachments() {
+  const zones = attachmentZones();
+  const perZone = await Promise.all(zones.map((zone) => {
+    const files = [...(zone.querySelector('input[type="file"]').files || [])];
+    return Promise.all(files.map((file) => shrinkImage(file, zone.dataset.attachmentType)));
+  }));
+  return zones.map((zone, i) => ({ zone, files: perZone[i] }));
+}
+
 // Files travel with the application in one multipart request, each under the field
 // name of the section it was attached to. The browser sets the boundary itself, so
 // the request must not carry a Content-Type of its own.
-function buildSubmission() {
+function buildSubmission(prepared) {
   const data = new FormData();
   data.append('payload', JSON.stringify(collect()));
-  attachmentZones().forEach((zone) => {
-    [...(zone.querySelector('input[type="file"]').files || [])]
-      .forEach((file) => data.append(zone.dataset.attachmentType, file));
+  prepared.forEach(({ zone, files }) => {
+    files.forEach((file) => data.append(zone.dataset.attachmentType, file));
   });
   return data;
 }
@@ -365,7 +423,7 @@ document.querySelectorAll('[data-dropzone]').forEach((zone) => {
     [...files].forEach((file) => {
       const li = document.createElement('li');
       const kb = Math.max(1, Math.round(file.size / 1024));
-      const problem = fileProblem(file, allowed);
+      const problem = fileProblem(file, allowed, true);
       li.innerHTML = problem
         ? `${file.name} <span class="file-bad">(${problem})</span>`
         : `${file.name} <span>(${kb} KB)</span>`;
@@ -374,7 +432,7 @@ document.querySelectorAll('[data-dropzone]').forEach((zone) => {
 
     if (preview) {
       const [file] = files;
-      const showPreview = file && !fileProblem(file, allowed);
+      const showPreview = file && !fileProblem(file, allowed, true);
       if (showPreview) preview.src = URL.createObjectURL(file);
       else preview.removeAttribute('src');
       preview.hidden = !showPreview;
@@ -459,20 +517,23 @@ form.addEventListener('submit', async (event) => {
     return;
   }
 
-  const badFiles = attachmentErrors();
-  if (badFiles.length) {
-    setErrors(badFiles);
-    setStatus('Please remove or replace the files listed below.', 'err');
-    return;
-  }
-
   submitBtn.disabled = true;
-  setStatus('Submitting your application…');
+  setStatus('Preparing your documents…');
 
   try {
+    const prepared = await prepareAttachments();
+
+    const badFiles = attachmentErrors(prepared);
+    if (badFiles.length) {
+      setErrors(badFiles);
+      setStatus('Please remove or replace the files listed below.', 'err');
+      return;
+    }
+
+    setStatus('Submitting your application…');
     const response = await fetch('/api/candidates', {
       method: 'POST',
-      body: buildSubmission(),
+      body: buildSubmission(prepared),
     });
     const result = await response.json();
 
