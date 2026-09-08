@@ -38,9 +38,10 @@ async function sendApplicationConfirmation(candidate) {
   const company = config.company.name;
   const name = candidate.candidateName
     || [candidate.title, candidate.firstName, candidate.lastName].filter(Boolean).join(' ');
-  const docCount = (candidate.attachments || []).length;
-  const attachmentClause = docCount
-    ? `, along with the ${docCount} supporting document${docCount === 1 ? '' : 's'} submitted with your application`
+  // Worded exactly as the standard acknowledgement, minus the clause itself when
+  // the candidate attached nothing - the sentence would otherwise be untrue.
+  const attachmentClause = (candidate.attachments || []).length
+    ? ', along with the supporting documents submitted with your application'
     : '';
   const position = candidate.positionAppliedFor;
   const lines = signatureLines();
