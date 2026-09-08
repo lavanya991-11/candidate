@@ -159,8 +159,8 @@ async function sendApplicationConfirmation(candidate) {
                 <tr>
                   <td align="left" valign="middle" style="font-family: Arial, Helvetica, sans-serif;">
                     <div style="font-size: 22px; font-weight: bold; color: #0f2f6b;">Application Acknowledgement</div>
-                    <div style="font-size: 13px; color: #3b5175; line-height: 1.6; padding-top: 8px;">
-                      Thank you for taking the next step<br />in your career with us!
+                    <div style="font-size: 13px; color: #3b5175; line-height: 1.6; padding-top: 8px; white-space: nowrap;">
+                      Thank you for taking the next step in your career with us!
                     </div>
                   </td>
                   <td align="right" valign="middle" width="220" style="width: 220px;">
@@ -212,10 +212,16 @@ async function sendApplicationConfirmation(candidate) {
           </tr>
 
           <tr>
-            <td style="padding: 18px 28px 20px; font-family: Arial, Helvetica, sans-serif; font-size: 14px; line-height: 1.6; color: #1f2937;">
-              <div>Best Regards,</div>
-              <div style="font-weight: bold; color: ${brand};">Talent Acquisition Team</div>
-              <div style="color: #33415c;">${escapeHtml(company)}</div>
+            <td style="padding-top: 18px; padding-right: 28px; padding-bottom: 20px; padding-left: 28px;">
+              <table width="100%" ${table}>
+                <tr>
+                  <td align="left" valign="top" style="font-family: Arial, Helvetica, sans-serif; font-size: 14px; line-height: 1.6; color: #1f2937;">
+                    <div>Best Regards,</div>
+                    <div style="font-weight: bold; color: ${brand};">Talent Acquisition Team</div>
+                    <div style="color: #33415c;">${escapeHtml(company)}</div>
+                  </td>
+                </tr>
+              </table>
             </td>
           </tr>
 
