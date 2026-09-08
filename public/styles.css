@@ -143,6 +143,9 @@ label em, legend em { color: var(--err); font-style: normal; }
 label .optional, legend .optional { color: var(--muted); font-weight: 400; }
 .hint { font-size: 11px; color: var(--muted); }
 
+/* The dial code and the number read as one control but are two fields. */
+.phone-group { display: grid; grid-template-columns: 116px minmax(0, 1fr); gap: 8px; }
+
 input[type="text"], input:not([type]), input[type="email"], input[type="tel"],
 input[type="date"], select, textarea {
   width: 100%;
@@ -200,6 +203,7 @@ fieldset.invalid legend, .table-wrap.invalid + .btn-add { color: var(--err); }
 .table-label { display: block; margin-bottom: 8px; }
 .table-wrap { overflow-x: auto; }
 .grid-table { width: 100%; border-collapse: collapse; min-width: 620px; }
+#employment-table { min-width: 760px; }
 .grid-table th, .grid-table td { border: 1px solid var(--line); padding: 0; }
 .grid-table th {
   background: #f7f9fc; font-size: 12px; font-weight: 600; color: var(--label);

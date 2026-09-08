@@ -56,6 +56,7 @@ function cleanEmployment(rows, errors) {
     const n = i + 1;
     const entry = {
       employerName: str(row.employerName).slice(0, 100),
+      companyName: str(row.companyName).slice(0, 100),
       position: str(row.position).slice(0, 100),
       department: str(row.department).slice(0, 100),
       fromDate: cleanDate(row.fromDate, `Employment row ${n} From Date`, errors),
@@ -64,7 +65,8 @@ function cleanEmployment(rows, errors) {
     if (entry.fromDate && entry.tillDate && entry.fromDate > entry.tillDate) {
       errors.push(`Employment row ${n}: From Date is after Till Date`);
     }
-    if (!entry.employerName && (entry.position || entry.department || entry.fromDate)) {
+    if (!entry.employerName
+        && (entry.companyName || entry.position || entry.department || entry.fromDate)) {
       errors.push(`Employment row ${n}: employer name is required when the row is filled in`);
     }
     return entry;
@@ -105,6 +107,7 @@ function validateCandidate(req, res, next) {
   if (!candidate.firstName) errors.push('First name is required');
   if (!candidate.lastName) errors.push('Last name is required');
   if (!candidate.gender) errors.push('Gender is required');
+  if (!candidate.maritalStatus) errors.push('Marital status is required');
   if (!candidate.positionAppliedFor) errors.push('Position applied for is required');
 
   if (!candidate.email) errors.push('Email address is required');

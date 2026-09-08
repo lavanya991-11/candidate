@@ -99,6 +99,7 @@ function candidatePayload(c) {
 function employmentPayload(row) {
   const line = {
     employerName: clip(row.employerName, 100),
+    companyName: clip(row.companyName, 100),
     position: clip(row.position, 100),
     department: clip(row.department, 100),
   };

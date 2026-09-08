@@ -9,10 +9,12 @@ const DRAFT_KEY = 'candidate-form-draft';
 // value is the code and only the label is the name. The codes must exist on the
 // Countries/Regions page in Business Central or the record is rejected.
 const COUNTRIES = [
-  ['IN', 'India'], ['AE', 'United Arab Emirates'], ['SA', 'Saudi Arabia'], ['QA', 'Qatar'],
-  ['OM', 'Oman'], ['KW', 'Kuwait'], ['BH', 'Bahrain'], ['GB', 'United Kingdom'],
-  ['US', 'United States'], ['CA', 'Canada'], ['AU', 'Australia'], ['NZ', 'New Zealand'],
-  ['SG', 'Singapore'], ['MY', 'Malaysia'], ['DE', 'Germany'], ['IE', 'Ireland'],
+  ['IN', 'India', '+91'], ['AE', 'United Arab Emirates', '+971'], ['SA', 'Saudi Arabia', '+966'],
+  ['QA', 'Qatar', '+974'], ['OM', 'Oman', '+968'], ['KW', 'Kuwait', '+965'],
+  ['BH', 'Bahrain', '+973'], ['GB', 'United Kingdom', '+44'], ['US', 'United States', '+1'],
+  ['CA', 'Canada', '+1'], ['AU', 'Australia', '+61'], ['NZ', 'New Zealand', '+64'],
+  ['SG', 'Singapore', '+65'], ['MY', 'Malaysia', '+60'], ['DE', 'Germany', '+49'],
+  ['IE', 'Ireland', '+353'],
 ];
 
 /* ── row templates for the repeating tables ─────────────────────── */
@@ -20,6 +22,7 @@ const ROW_TEMPLATES = {
   'employment-table': (n) => `
     <td class="col-no">${n}</td>
     <td><input name="emp_employerName" maxlength="100" /></td>
+    <td><input name="emp_companyName" maxlength="100" /></td>
     <td><input name="emp_position" maxlength="100" /></td>
     <td><input name="emp_department" maxlength="100" /></td>
     <td><input name="emp_fromDate" type="date" /></td>
@@ -80,6 +83,8 @@ function value(name) {
   return (el.value || '').trim();
 }
 
+const joinPhone = (dial, number) => (dial && number ? `(${dial}) ${number}` : number);
+
 function collect() {
   return {
     title: value('title'),
@@ -91,7 +96,7 @@ function collect() {
     maritalStatus: value('maritalStatus'),
     positionAppliedFor: value('positionAppliedFor'),
     email: value('email'),
-    phoneNo: value('phoneNo'),
+    phoneNo: joinPhone(value('phoneCode'), value('phoneNo')),
     currentAddress: {
       line1: value('cur_line1'), line2: value('cur_line2'), city: value('cur_city'),
       state: value('cur_state'), pinCode: value('cur_pin'), country: value('cur_country'),
@@ -106,7 +111,7 @@ function collect() {
     englishCertification: value('englishCertification'),
     englishTestDate: value('englishTestDate'),
     employment: rowsFrom('employment-table', 'emp',
-      ['employerName', 'position', 'department', 'fromDate', 'tillDate']),
+      ['employerName', 'companyName', 'position', 'department', 'fromDate', 'tillDate']),
     references: rowsFrom('references-table', 'ref',
       ['name', 'email', 'phoneNo', 'notes']),
   };
@@ -126,6 +131,7 @@ function syncPermanentAddress() {
     target.readOnly = same && target.tagName === 'INPUT';
     target.disabled = same && target.tagName === 'SELECT';
     target.style.background = same ? '#f7f9fc' : '';
+    if (same) target.classList.remove('invalid');
     // Address 2 is the one optional part; the rest have to be filled in by hand
     // as soon as the permanent address is no longer a copy of the current one.
     if (to !== 'per_line2') target.required = !same;
@@ -151,9 +157,14 @@ function restoreDraft() {
   };
 
   ['title', 'firstName', 'middleName', 'lastName', 'dateOfBirth', 'gender', 'maritalStatus',
-    'positionAppliedFor', 'email', 'phoneNo', 'qualification', 'otherQualification',
+    'positionAppliedFor', 'email', 'qualification', 'otherQualification',
     'englishCertification',
     'englishTestDate', 'sameAsCurrent'].forEach((k) => setValue(k, draft[k]));
+
+  const savedPhone = String(draft.phoneNo || '');
+  const codeEnd = savedPhone.startsWith('(') ? savedPhone.indexOf(')') : -1;
+  setValue('phoneCode', codeEnd > 0 ? savedPhone.slice(1, codeEnd) : draft.phoneCode);
+  setValue('phoneNo', codeEnd > 0 ? savedPhone.slice(codeEnd + 1).trim() : draft.phoneNo);
 
   const addr = (prefix, obj = {}) => {
     setValue(`${prefix}_line1`, obj.line1); setValue(`${prefix}_line2`, obj.line2);
@@ -166,8 +177,8 @@ function restoreDraft() {
   document.querySelector('#employment-table tbody').innerHTML = '';
   document.querySelector('#references-table tbody').innerHTML = '';
   (draft.employment || []).forEach((r) => addRow('employment-table', {
-    emp_employerName: r.employerName, emp_position: r.position, emp_department: r.department,
-    emp_fromDate: r.fromDate, emp_tillDate: r.tillDate,
+    emp_employerName: r.employerName, emp_companyName: r.companyName, emp_position: r.position,
+    emp_department: r.department, emp_fromDate: r.fromDate, emp_tillDate: r.tillDate,
   }));
   (draft.references || []).forEach((r) => addRow('references-table', {
     ref_name: r.name, ref_email: r.email, ref_phoneNo: r.phoneNo, ref_notes: r.notes,
@@ -219,10 +230,31 @@ function markInvalid() {
   return missing;
 }
 
+// The highlight is put on at submission, but it comes off as soon as the field it
+// belongs to is filled in rather than waiting for the next attempt.
+function clearInvalid(event) {
+  const el = event.target;
+  if (el.matches('input, select, textarea') && (el.value || '').trim()) {
+    el.classList.remove('invalid');
+  }
+  const group = el.closest('[data-required-group]');
+  if (group && value(group.dataset.requiredGroup)) group.classList.remove('invalid');
+  const zone = el.closest('[data-dropzone]');
+  if (zone && el.type === 'file' && el.files.length) zone.classList.remove('invalid');
+}
+
 /* ── wiring ─────────────────────────────────────────────────────── */
+form.addEventListener('input', clearInvalid);
+form.addEventListener('change', clearInvalid);
+
 document.querySelectorAll('select[data-countries]').forEach((select) => {
   select.innerHTML = '<option value="">Please Select</option>' +
     COUNTRIES.map(([code, name]) => `<option value="${code}">${name}</option>`).join('');
+});
+
+document.querySelectorAll('select[data-dial-codes]').forEach((select) => {
+  select.innerHTML = '<option value="">Code</option>' +
+    COUNTRIES.map(([code, name, dial]) => `<option value="${dial}" title="${name}">${dial} (${code})</option>`).join('');
 });
 
 // Business Central only accepts "Other Qualification" alongside the Other option.
