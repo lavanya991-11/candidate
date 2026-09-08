@@ -18,6 +18,14 @@ const allowedOrigins = (process.env.ALLOWED_ORIGINS ||
 const config = {
   port: Number(process.env.PORT) || 3000,
   allowedOrigins,
+  // Used in the confirmation email's subject line and signature block. Any contact
+  // channel left unset is simply left out of the signature.
+  company: {
+    name: process.env.COMPANY_NAME || 'Novasoft',
+    careersEmail: process.env.COMPANY_CAREERS_EMAIL,
+    website: process.env.COMPANY_WEBSITE,
+    phone: process.env.COMPANY_PHONE,
+  },
   mail: {
     host: process.env.SMTP_HOST,
     port: Number(process.env.SMTP_PORT) || 587,
