@@ -23,9 +23,9 @@ function getTransporter() {
 function signatureLines() {
   const { name, careersEmail, website, phone } = config.company;
   return [
-    { icon: '\u{1F4E7}', value: careersEmail, href: `mailto:${careersEmail}` },
+    { icon: '✉', value: careersEmail, href: `mailto:${careersEmail}` },
     { icon: '\u{1F310}', value: website, href: /^https?:\/\//i.test(website || '') ? website : `https://${website}` },
-    { icon: '\u{1F4DE}', value: phone, href: `tel:${String(phone || '').replace(/[^+\d]/g, '')}` },
+    { icon: '☎', value: phone, href: `tel:${String(phone || '').replace(/[^+\d]/g, '')}` },
   ].filter((line) => line.value).map((line) => ({ ...line, company: name }));
 }
 
@@ -78,37 +78,45 @@ async function sendApplicationConfirmation(candidate) {
     + lines.map((l) => `${l.icon} ${l.value}\n`).join('')
     + '\nThis is an automated email. Please do not reply directly to this message.';
 
-  // Laid out with tables and inline styles only - no external images, no flexbox and
-  // no gradients - so it renders the same in Outlook as it does in Gmail.
+  // Built for Outlook's Word rendering engine, which is the strictest client in use:
+  //   - every coloured area carries a bgcolor attribute as well as the CSS, because
+  //     Word ignores the `background` shorthand and would otherwise drop the fill
+  //     (white footer text on an unpainted footer is invisible);
+  //   - rules are 1px bgcolor rows, not CSS borders, which Word paints around every
+  //     cell in the table rather than along the one edge asked for;
+  //   - no empty <div> spacers - Word collapses anything with no content, so shapes
+  //     are table cells with a real glyph inside them;
+  //   - border-collapse is set everywhere so no stray cell borders appear.
+  // border-radius is simply ignored by Word: the corners go square, nothing breaks.
   const brand = '#1e50c8';
   const highlight = (s) => `<strong style="color: ${brand};">${escapeHtml(s)}</strong>`;
   const careersLink = lines.find((l) => l.value === config.company.website);
   const initial = escapeHtml((company || '?').trim().charAt(0).toUpperCase());
+  const table = 'cellpadding="0" cellspacing="0" border="0" role="presentation" style="border-collapse: collapse;"';
+  const rule = (color) => `<tr><td height="1" bgcolor="${color}" style="height: 1px; line-height: 1px; font-size: 0;">&nbsp;</td></tr>`;
 
   const html = `
-  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background: #eef2f8; margin: 0; padding: 24px 12px;">
+  <table width="100%" bgcolor="#eef2f8" cellpadding="0" cellspacing="0" border="0" role="presentation" style="border-collapse: collapse; background-color: #eef2f8;">
     <tr>
-      <td align="center">
-        <table role="presentation" width="640" cellpadding="0" cellspacing="0" border="0" style="width: 640px; max-width: 640px; background: #ffffff; border-radius: 14px; overflow: hidden; font-family: Arial, Helvetica, sans-serif; color: #1f2937;">
+      <td align="center" style="padding: 24px 12px;">
+        <table width="640" bgcolor="#ffffff" cellpadding="0" cellspacing="0" border="0" role="presentation" style="width: 640px; max-width: 640px; border-collapse: collapse; background-color: #ffffff; border-radius: 14px; font-family: Arial, Helvetica, sans-serif; color: #1f2937;">
 
           <tr>
-            <td style="padding: 20px 28px; border-bottom: 1px solid #eef2f8;">
-              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+            <td style="padding: 20px 28px;">
+              <table width="100%" ${table}>
                 <tr>
-                  <td align="left">
-                    <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+                  <td width="40" valign="middle" style="width: 40px;">
+                    <table ${table}>
                       <tr>
-                        <td width="38" style="width: 38px;">
-                          <div style="width: 38px; height: 38px; border-radius: 9px; background: ${brand}; color: #ffffff; font-size: 18px; font-weight: bold; line-height: 38px; text-align: center;">${initial}</div>
-                        </td>
-                        <td style="padding-left: 10px;">
-                          <div style="font-size: 17px; font-weight: bold; color: #0f2f6b;">${escapeHtml(company)}</div>
-                          <div style="font-size: 11px; color: #6b7280; padding-top: 2px;">Technology for a better tomorrow</div>
-                        </td>
+                        <td width="40" height="40" align="center" valign="middle" bgcolor="${brand}" style="width: 40px; height: 40px; background-color: ${brand}; border-radius: 9px; color: #ffffff; font-family: Arial, Helvetica, sans-serif; font-size: 18px; font-weight: bold;">${initial}</td>
                       </tr>
                     </table>
                   </td>
-                  <td align="right" style="font-size: 13px; font-weight: bold; color: ${brand};">
+                  <td valign="middle" style="padding-left: 12px; font-family: Arial, Helvetica, sans-serif;">
+                    <div style="font-size: 17px; font-weight: bold; color: #0f2f6b;">${escapeHtml(company)}</div>
+                    <div style="font-size: 11px; color: #6b7280; padding-top: 3px;">Technology for a better tomorrow</div>
+                  </td>
+                  <td align="right" valign="middle" style="font-family: Arial, Helvetica, sans-serif; font-size: 13px; font-weight: bold; color: ${brand};">
                     ${careersLink
     ? `<a href="${escapeHtml(careersLink.href)}" style="color: ${brand}; text-decoration: none;">Careers</a>`
     : 'Careers'}
@@ -118,23 +126,24 @@ async function sendApplicationConfirmation(candidate) {
             </td>
           </tr>
 
+          ${rule('#e6ecf5')}
+
           <tr>
-            <td style="background: #e8f0fe; padding: 26px 28px;">
-              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+            <td bgcolor="#e8f0fe" style="background-color: #e8f0fe; padding: 26px 28px;">
+              <table width="100%" ${table}>
                 <tr>
-                  <td align="left" valign="middle">
+                  <td align="left" valign="middle" style="font-family: Arial, Helvetica, sans-serif;">
                     <div style="font-size: 22px; font-weight: bold; color: #0f2f6b;">Application Acknowledgement</div>
                     <div style="font-size: 13px; color: #3b5175; line-height: 1.6; padding-top: 8px;">
-                      Thank you for taking the next step<br />in your career with us!
+                      Thank you for taking the next step in your career with us!
                     </div>
                   </td>
-                  <td align="right" valign="middle" width="120" style="width: 120px;">
-                    <div style="width: 96px; background: #ffffff; border: 1px solid #d7e3fb; border-radius: 10px; padding: 12px;">
-                      <div style="height: 7px; background: #cfdefa; border-radius: 4px;"></div>
-                      <div style="height: 7px; width: 70%; background: #e2eafb; border-radius: 4px; margin-top: 6px;"></div>
-                      <div style="height: 7px; width: 45%; background: #e2eafb; border-radius: 4px; margin-top: 6px;"></div>
-                      <div style="width: 24px; height: 24px; border-radius: 12px; background: #22a06b; color: #ffffff; font-size: 13px; line-height: 24px; text-align: center; margin-top: 12px;">&#10003;</div>
-                    </div>
+                  <td align="right" valign="middle" width="72" style="width: 72px;">
+                    <table ${table}>
+                      <tr>
+                        <td width="60" height="60" align="center" valign="middle" bgcolor="#ffffff" style="width: 60px; height: 60px; background-color: #ffffff; border-radius: 30px; font-family: Arial, Helvetica, sans-serif; font-size: 26px; color: #22a06b;">&#10003;</td>
+                      </tr>
+                    </table>
                   </td>
                 </tr>
               </table>
@@ -142,26 +151,30 @@ async function sendApplicationConfirmation(candidate) {
           </tr>
 
           <tr>
-            <td style="padding: 26px 28px 8px; font-size: 14px; line-height: 1.75;">
+            <td style="padding: 26px 28px 10px; font-family: Arial, Helvetica, sans-serif; font-size: 14px; line-height: 1.7; color: #1f2937;">
               <p style="margin: 0 0 16px;">Dear ${escapeHtml(name)},</p>
               ${bodyParagraphs(highlight).map((p) => `<p style="margin: 0 0 16px;">${p}</p>`).join('\n              ')}
             </td>
           </tr>
 
           <tr>
-            <td style="padding: 8px 28px 4px;">
-              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background: #f3f7fe; border: 1px solid #e2eafb; border-radius: 10px;">
+            <td style="padding: 6px 28px 10px;">
+              <table width="100%" bgcolor="#f3f7fe" cellpadding="0" cellspacing="0" border="0" role="presentation" style="border-collapse: collapse; background-color: #f3f7fe; border-radius: 10px;">
                 <tr>
-                  <td width="56" valign="top" style="width: 56px; padding: 18px 0 18px 18px;">
-                    <div style="width: 30px; height: 30px; border-radius: 15px; background: ${brand}; color: #ffffff; font-size: 15px; line-height: 30px; text-align: center;">&#10003;</div>
+                  <td width="60" align="center" valign="top" style="width: 60px; padding: 18px 0 18px 16px;">
+                    <table ${table}>
+                      <tr>
+                        <td width="30" height="30" align="center" valign="middle" bgcolor="${brand}" style="width: 30px; height: 30px; background-color: ${brand}; border-radius: 15px; font-family: Arial, Helvetica, sans-serif; font-size: 15px; color: #ffffff;">&#10003;</td>
+                      </tr>
+                    </table>
                   </td>
-                  <td valign="top" style="padding: 18px 18px 18px 0;">
+                  <td valign="top" style="padding: 18px 18px 18px 4px; font-family: Arial, Helvetica, sans-serif;">
                     <div style="font-size: 14px; font-weight: bold; color: #0f2f6b; padding-bottom: 10px;">Application Summary</div>
-                    <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="font-size: 13px; color: #33415c;">
+                    <table ${table}>
                       ${summaryRows.map(([label, value]) => `<tr>
-                        <td style="padding: 3px 0;">${escapeHtml(label)}</td>
-                        <td style="padding: 3px 10px;">:</td>
-                        <td style="padding: 3px 0; font-weight: bold; color: #0f2f6b;">${escapeHtml(value)}</td>
+                        <td width="150" valign="top" style="width: 150px; padding: 3px 0; font-size: 13px; color: #33415c; white-space: nowrap;">${escapeHtml(label)}</td>
+                        <td width="16" valign="top" style="width: 16px; padding: 3px 0; font-size: 13px; color: #33415c;">:</td>
+                        <td valign="top" style="padding: 3px 0; font-size: 13px; font-weight: bold; color: #0f2f6b;">${escapeHtml(value)}</td>
                       </tr>`).join('\n                      ')}
                     </table>
                   </td>
@@ -171,34 +184,37 @@ async function sendApplicationConfirmation(candidate) {
           </tr>
 
           <tr>
-            <td style="padding: 22px 28px 6px; font-size: 14px; line-height: 1.7;">
-              <p style="margin: 0;">Best Regards,</p>
-              <p style="margin: 0; font-weight: bold; color: ${brand};">Talent Acquisition Team</p>
-              <p style="margin: 0; color: #33415c;">${escapeHtml(company)}</p>
+            <td style="padding: 18px 28px 20px; font-family: Arial, Helvetica, sans-serif; font-size: 14px; line-height: 1.6; color: #1f2937;">
+              <div>Best Regards,</div>
+              <div style="font-weight: bold; color: ${brand};">Talent Acquisition Team</div>
+              <div style="color: #33415c;">${escapeHtml(company)}</div>
             </td>
           </tr>
 
-          ${lines.length ? `<tr>
-            <td style="padding: 16px 28px 22px;">
-              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-top: 1px solid #eef2f8; border-bottom: 1px solid #eef2f8;">
+          ${lines.length ? `${rule('#e6ecf5')}
+          <tr>
+            <td style="padding: 14px 28px;">
+              <table width="100%" ${table}>
                 <tr>
-                  ${lines.map((l) => `<td align="center" style="padding: 14px 6px; font-size: 12px;">
-                    <span style="font-size: 13px;">${l.icon}</span>&nbsp;<a href="${escapeHtml(l.href)}" style="color: ${brand}; text-decoration: none;">${escapeHtml(l.value)}</a>
+                  ${lines.map((l) => `<td width="${Math.floor(100 / lines.length)}%" align="center" valign="middle" style="font-family: Arial, Helvetica, sans-serif; font-size: 12px; color: ${brand};">
+                    <span style="font-size: 13px; color: #33415c;">${l.icon}</span>&nbsp;<a href="${escapeHtml(l.href)}" style="color: ${brand}; text-decoration: none;">${escapeHtml(l.value)}</a>
                   </td>`).join('\n                  ')}
                 </tr>
               </table>
             </td>
-          </tr>` : ''}
+          </tr>
+          ${rule('#e6ecf5')}` : ''}
 
           <tr>
-            <td style="background: #123163; padding: 18px 28px;">
-              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+            <td bgcolor="#123163" style="background-color: #123163; padding: 18px 28px;">
+              <table width="100%" ${table}>
                 <tr>
-                  <td align="left" valign="middle" style="font-size: 12px; color: #ffffff; font-weight: bold; line-height: 1.5;">
+                  <td align="left" valign="middle" width="42%" style="width: 42%; font-family: Arial, Helvetica, sans-serif; font-size: 12px; font-weight: bold; color: #ffffff; line-height: 1.5;">
                     Build Your Future<br />With Us
                   </td>
-                  <td align="right" valign="middle" style="font-size: 11px; color: #b8c8e6; line-height: 1.5; border-left: 1px solid #2b4a80; padding-left: 18px;">
-                    This is an automated email. Please do not reply directly<br />to this message.
+                  <td width="1" bgcolor="#2b4a80" style="width: 1px; background-color: #2b4a80; font-size: 0; line-height: 0;">&nbsp;</td>
+                  <td align="right" valign="middle" style="padding-left: 18px; font-family: Arial, Helvetica, sans-serif; font-size: 11px; color: #c3d3ee; line-height: 1.5;">
+                    This is an automated email. Please do not reply directly to this message.
                   </td>
                 </tr>
               </table>
