@@ -1,3 +1,5 @@
+const fs = require('fs');
+const path = require('path');
 const nodemailer = require('nodemailer');
 const config = require('../config');
 
@@ -18,14 +20,27 @@ function getTransporter() {
   return transporter;
 }
 
+// The artwork travels with the message as inline attachments rather than as
+// linked images, so it shows without the recipient having to allow remote
+// content - Outlook blocks that by default. A file that has gone missing is
+// simply left out: the layout falls back to text and the mail still goes,
+// rather than a failed send over decoration.
+const ASSET_DIR = path.join(__dirname, '..', 'assets', 'email');
+
+function inlineImage(name) {
+  const file = path.join(ASSET_DIR, `${name}.png`);
+  if (!fs.existsSync(file)) return null;
+  return { filename: `${name}.png`, path: file, cid: `${name}@acknowledgement` };
+}
+
 // The signature block only lists the channels that are actually configured, so an
 // unset phone number leaves the line out rather than printing an empty label.
 function signatureLines() {
   const { name, careersEmail, website, phone } = config.company;
   return [
-    { icon: '✉', value: careersEmail, href: `mailto:${careersEmail}` },
-    { icon: '\u{1F310}', value: website, href: /^https?:\/\//i.test(website || '') ? website : `https://${website}` },
-    { icon: '☎', value: phone, href: `tel:${String(phone || '').replace(/[^+\d]/g, '')}` },
+    { key: 'icon-mail', glyph: '✉', value: careersEmail, href: `mailto:${careersEmail}` },
+    { key: 'icon-web', glyph: '\u{1F310}', value: website, href: /^https?:\/\//i.test(website || '') ? website : `https://${website}` },
+    { key: 'icon-phone', glyph: '☎', value: phone, href: `tel:${String(phone || '').replace(/[^+\d]/g, '')}` },
   ].filter((line) => line.value).map((line) => ({ ...line, company: name }));
 }
 
@@ -75,8 +90,18 @@ async function sendApplicationConfirmation(candidate) {
     + 'Application Summary\n'
     + summaryRows.map(([label, value]) => `  ${label} : ${value}\n`).join('')
     + `\nBest Regards,\nTalent Acquisition Team\n${company}\n`
-    + lines.map((l) => `${l.icon} ${l.value}\n`).join('')
+    + lines.map((l) => `${l.glyph} ${l.value}\n`).join('')
     + '\nThis is an automated email. Please do not reply directly to this message.';
+
+  const images = {};
+  for (const key of ['hero', 'leaf', ...lines.map((l) => l.key)]) {
+    const image = inlineImage(key);
+    if (image) images[key] = image;
+  }
+
+  const img = (key, width, height, alt) => (images[key]
+    ? `<img src="cid:${images[key].cid}" width="${width}" height="${height}" alt="${escapeHtml(alt)}" style="display: block; border: 0; outline: none; text-decoration: none;" />`
+    : '');
 
   // Built for Outlook's Word rendering engine, which is the strictest client in use:
   //   - every coloured area carries a bgcolor attribute as well as the CSS, because
@@ -129,21 +154,24 @@ async function sendApplicationConfirmation(candidate) {
           ${rule('#e6ecf5')}
 
           <tr>
-            <td bgcolor="#e8f0fe" style="background-color: #e8f0fe; padding: 26px 28px;">
+            <td bgcolor="#e8f0fe" style="background-color: #e8f0fe; padding: 24px 0 24px 28px;">
               <table width="100%" ${table}>
                 <tr>
                   <td align="left" valign="middle" style="font-family: Arial, Helvetica, sans-serif;">
                     <div style="font-size: 22px; font-weight: bold; color: #0f2f6b;">Application Acknowledgement</div>
                     <div style="font-size: 13px; color: #3b5175; line-height: 1.6; padding-top: 8px;">
-                      Thank you for taking the next step in your career with us!
+                      Thank you for taking the next step<br />in your career with us!
                     </div>
                   </td>
-                  <td align="right" valign="middle" width="72" style="width: 72px;">
-                    <table ${table}>
+                  <td align="right" valign="middle" width="220" style="width: 220px;">
+                    ${images.hero
+    ? img('hero', 220, 150, 'Application received')
+    : `<table align="right" ${table}>
                       <tr>
                         <td width="60" height="60" align="center" valign="middle" bgcolor="#ffffff" style="width: 60px; height: 60px; background-color: #ffffff; border-radius: 30px; font-family: Arial, Helvetica, sans-serif; font-size: 26px; color: #22a06b;">&#10003;</td>
+                        <td width="28" style="width: 28px; font-size: 0; line-height: 0;">&nbsp;</td>
                       </tr>
-                    </table>
+                    </table>`}
                   </td>
                 </tr>
               </table>
@@ -193,27 +221,35 @@ async function sendApplicationConfirmation(candidate) {
 
           ${lines.length ? `${rule('#e6ecf5')}
           <tr>
-            <td style="padding: 14px 28px;">
+            <td style="padding: 16px 20px;">
               <table width="100%" ${table}>
                 <tr>
-                  ${lines.map((l) => `<td width="${Math.floor(100 / lines.length)}%" align="center" valign="middle" style="font-family: Arial, Helvetica, sans-serif; font-size: 12px; color: ${brand};">
-                    <span style="font-size: 13px; color: #33415c;">${l.icon}</span>&nbsp;<a href="${escapeHtml(l.href)}" style="color: ${brand}; text-decoration: none;">${escapeHtml(l.value)}</a>
+                  ${lines.map((l, i) => `${i ? `<td width="1" bgcolor="#e6ecf5" style="width: 1px; background-color: #e6ecf5; font-size: 0; line-height: 0;">&nbsp;</td>` : ''}
+                  <td align="center" valign="middle">
+                    <table ${table}>
+                      <tr>
+                        <td width="28" valign="middle" style="width: 28px;">${images[l.key]
+    ? img(l.key, 28, 28, '')
+    : `<table ${table}><tr><td width="28" height="28" align="center" valign="middle" bgcolor="${brand}" style="width: 28px; height: 28px; background-color: ${brand}; border-radius: 9px; color: #ffffff; font-size: 13px;">${l.glyph}</td></tr></table>`}</td>
+                        <td valign="middle" style="padding-left: 9px; font-family: Arial, Helvetica, sans-serif; font-size: 12px;"><a href="${escapeHtml(l.href)}" style="color: ${brand}; text-decoration: none;">${escapeHtml(l.value)}</a></td>
+                      </tr>
+                    </table>
                   </td>`).join('\n                  ')}
                 </tr>
               </table>
             </td>
-          </tr>
-          ${rule('#e6ecf5')}` : ''}
+          </tr>` : ''}
 
           <tr>
-            <td bgcolor="#123163" style="background-color: #123163; padding: 18px 28px;">
+            <td bgcolor="#123163" style="background-color: #123163; padding: 16px 28px;">
               <table width="100%" ${table}>
                 <tr>
-                  <td align="left" valign="middle" width="42%" style="width: 42%; font-family: Arial, Helvetica, sans-serif; font-size: 12px; font-weight: bold; color: #ffffff; line-height: 1.5;">
+                  ${images.leaf ? `<td width="26" valign="middle" style="width: 26px;">${img('leaf', 22, 22, '')}</td>` : ''}
+                  <td align="left" valign="middle" style="padding-left: ${images.leaf ? '10px' : '0'}; font-family: Arial, Helvetica, sans-serif; font-size: 12px; font-weight: bold; color: #ffffff; line-height: 1.5;">
                     Build Your Future<br />With Us
                   </td>
                   <td width="1" bgcolor="#2b4a80" style="width: 1px; background-color: #2b4a80; font-size: 0; line-height: 0;">&nbsp;</td>
-                  <td align="right" valign="middle" style="padding-left: 18px; font-family: Arial, Helvetica, sans-serif; font-size: 11px; color: #c3d3ee; line-height: 1.5;">
+                  <td align="right" valign="middle" style="padding-left: 18px; font-family: Arial, Helvetica, sans-serif; font-size: 11px; font-style: italic; color: #c3d3ee; line-height: 1.5;">
                     This is an automated email. Please do not reply directly to this message.
                   </td>
                 </tr>
@@ -234,6 +270,7 @@ async function sendApplicationConfirmation(candidate) {
       subject: `Application Acknowledgement – ${position} Position | ${company}`,
       text,
       html,
+      attachments: Object.values(images),
     });
     return true;
   } catch (err) {
