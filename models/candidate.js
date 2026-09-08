@@ -135,9 +135,32 @@ async function postLines(candidateId, candidate) {
 }
 
 // The Candidate Attachment Type enum in BC only has Other/Education/Registration/
-// Experience - there is no Photo member - so the candidate's photo is filed under
-// Other, the closest fit, rather than BC rejecting the whole submission outright.
+// Experience - there is no Photo member - so a photo that has to travel as an
+// attachment is filed under Other, the closest fit. That is only the fallback now:
+// the photo's real home is the Candidate Picture, written by postPicture().
 const ATTACHMENT_TYPE_TO_BC = { Photo: 'Other' };
+
+// "Candidate Picture" is a Media field, published on the API page as a read-only
+// GUID, so there is no stream to write bytes to. The setPictureBase64 action is the
+// way in. BC re-encodes the image on import, and rejects anything that is not valid
+// Base64 with its own error.
+async function postPicture(candidateId, photo) {
+  if (!photo) return false;
+  try {
+    await bcClient.request('post', `candidates(${candidateId})/Microsoft.NAV.setPictureBase64`, {
+      data: { pictureBase64: photo.buffer.toString('base64') },
+    });
+    return true;
+  } catch (err) {
+    // Same reasoning as the submit action below: where the extension predates the
+    // action the application still arrived in full, and the photo is filed as an
+    // attachment instead of being lost.
+    if (err.response?.status !== 404) throw err;
+    console.warn('[bc] candidates/Microsoft.NAV.setPictureBase64 is not published - '
+      + 'the photo was filed as an attachment instead.');
+    return false;
+  }
+}
 
 // Each attached file is two calls: the line carries the name and the section it came
 // from, then the bytes go to the stream property the Blob is published as. The table
@@ -175,7 +198,15 @@ async function createInBc(candidate) {
   // Business Central as a draft and can be completed there.
   try {
     await postLines(id, candidate);
-    await postAttachments(created.entryNo, candidate.attachments);
+
+    // Once the photo is on the Candidate Picture there is no reason to keep a second
+    // copy of it in the attachment list, so it only stays there if the action is gone.
+    const photo = (candidate.attachments || []).find((f) => f.attachmentType === 'Photo');
+    const onPicture = await postPicture(id, photo);
+    await postAttachments(
+      created.entryNo,
+      onPicture ? candidate.attachments.filter((f) => f !== photo) : candidate.attachments,
+    );
   } catch (err) {
     err.partialSave = { id, entryNo: created.entryNo };
     throw err;
