@@ -130,11 +130,22 @@ function syncPermanentAddress() {
     if (same) target.value = form.elements[from].value;
     target.readOnly = same && target.tagName === 'INPUT';
     target.disabled = same && target.tagName === 'SELECT';
-    target.style.background = same ? '#f7f9fc' : '';
-    if (same) target.classList.remove('invalid');
+    target.classList.toggle('mirrored', same);
     // Address 2 is the one optional part; the rest have to be filled in by hand
     // as soon as the permanent address is no longer a copy of the current one.
     if (to !== 'per_line2') target.required = !same;
+  });
+  mirrorInvalidToPermanent();
+}
+
+// While the permanent address is a copy of the current one it has no values of its
+// own to be missing, so nothing marks it - but it is every bit as mandatory, and
+// leaving it plain next to a current address in red reads as though it were optional.
+// It shows whatever its twin shows.
+function mirrorInvalidToPermanent() {
+  if (!document.getElementById('sameAsCurrent').checked) return;
+  ADDRESS_PAIRS.forEach(([from, to]) => {
+    form.elements[to].classList.toggle('invalid', form.elements[from].classList.contains('invalid'));
   });
 }
 
@@ -227,6 +238,7 @@ function markInvalid() {
   });
 
   missing.forEach((el) => el.classList.add('invalid'));
+  mirrorInvalidToPermanent();
   return missing;
 }
 
@@ -241,6 +253,7 @@ function clearInvalid(event) {
   if (group && value(group.dataset.requiredGroup)) group.classList.remove('invalid');
   const zone = el.closest('[data-dropzone]');
   if (zone && el.type === 'file' && el.files.length) zone.classList.remove('invalid');
+  mirrorInvalidToPermanent();
 }
 
 /* ── wiring ─────────────────────────────────────────────────────── */

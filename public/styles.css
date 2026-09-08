@@ -160,6 +160,9 @@ input::placeholder { color: #9ca3af; }
 input:focus, select:focus, textarea:focus {
   outline: none; border-color: var(--blue); box-shadow: 0 0 0 3px rgba(37, 99, 235, .13);
 }
+/* A permanent address field while it is a copy of the current one. Lower
+   specificity than .invalid on purpose, so a missing address still shows red. */
+.mirrored { background: #f7f9fc; }
 input.invalid, select.invalid { border-color: var(--err); background: #fef4f4; }
 /* A radio group, an attachment section and a table cannot show the state on an
    input of their own, so the whole block is flagged instead. */
