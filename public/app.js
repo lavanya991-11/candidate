@@ -362,17 +362,56 @@ document.querySelectorAll('[data-dropzone]').forEach((zone) => {
   });
 });
 
-// Sidebar highlight follows the section in view.
-const sections = [...document.querySelectorAll('.card[id], .actions[id]')];
+/* ── sidebar navigation ─────────────────────────────────────────── */
+// The highlight follows the section in view, but a click on a step wins until the
+// scroll it started has settled. The last section cannot be scrolled all the way to
+// the top of the viewport, so position alone would send step 6 back to step 4.
 const stepLinks = [...document.querySelectorAll('.step')];
-const observer = new IntersectionObserver((entries) => {
-  entries.filter((e) => e.isIntersecting).forEach((entry) => {
-    stepLinks.forEach((link) => {
-      link.classList.toggle('is-active', link.getAttribute('href') === `#${entry.target.id}`);
-    });
+const stepTargets = stepLinks
+  .map((link) => ({ link, section: document.querySelector(link.getAttribute('href')) }))
+  .filter((entry) => entry.section);
+
+function activateStep(link) {
+  stepLinks.forEach((other) => other.classList.toggle('is-active', other === link));
+}
+
+const sectionTop = (section) => section.getBoundingClientRect().top + window.scrollY;
+
+function stepInView() {
+  const atBottom = window.innerHeight + window.scrollY
+    >= document.documentElement.scrollHeight - 2;
+  if (atBottom) return stepTargets[stepTargets.length - 1].link;
+
+  const marker = window.scrollY + window.innerHeight * 0.25;
+  let current = stepTargets[0];
+  stepTargets.forEach((entry) => {
+    if (sectionTop(entry.section) <= marker) current = entry;
   });
-}, { rootMargin: '-20% 0px -70% 0px' });
-sections.forEach((section) => observer.observe(section));
+  return current.link;
+}
+
+// A smooth scroll reports positions all the way there, so tracking is held off
+// until it has arrived rather than following the sections it passes over.
+let trackingHeldUntil = 0;
+
+function syncSteps() {
+  if (Date.now() < trackingHeldUntil) return;
+  activateStep(stepInView());
+}
+
+stepTargets.forEach(({ link, section }) => {
+  link.addEventListener('click', (event) => {
+    event.preventDefault();
+    activateStep(link);
+    trackingHeldUntil = Date.now() + 900;
+    section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    history.replaceState(null, '', link.getAttribute('href'));
+  });
+});
+
+window.addEventListener('scroll', syncSteps, { passive: true });
+window.addEventListener('resize', syncSteps);
+syncSteps();
 
 form.addEventListener('submit', async (event) => {
   event.preventDefault();

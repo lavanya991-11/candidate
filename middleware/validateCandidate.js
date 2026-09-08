@@ -150,22 +150,13 @@ function validateCandidate(req, res, next) {
   candidate.employment = cleanEmployment(body.employment, errors);
   candidate.references = cleanReferences(body.references, errors);
 
-  if (!candidate.employment.length) {
-    errors.push('At least one employment history row is required');
-  }
-
-  // Attached files were parsed out of the multipart body before validation. The
-  // photo stays optional; the two certificate sections do not.
+  // Attached files were parsed out of the multipart body before validation. Only the
+  // graduation certificates are mandatory; the photo, the registration certificates
+  // and the experience certificates are all optional.
   candidate.attachments = req.attachments || [];
   const attached = (type) => candidate.attachments.some((f) => f.attachmentType === type);
   if (!attached('Education')) {
     errors.push('At least one graduation certificate or mark sheet is required');
-  }
-  if (!attached('Registration')) {
-    errors.push('At least one registration certificate is required');
-  }
-  if (!attached('Experience')) {
-    errors.push('At least one employment experience certificate is required');
   }
 
   // Assembled once here so every downstream consumer sees the same name.

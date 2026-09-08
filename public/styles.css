@@ -109,6 +109,7 @@ svg { width: 18px; height: 18px; flex: none; stroke-linecap: round; stroke-linej
   padding: 20px 22px 22px;
   margin-bottom: 16px;
 }
+.card[id], .actions[id] { scroll-margin-top: 22px; }
 .card-title {
   display: flex; align-items: center; gap: 9px;
   margin: 0 0 16px; font-size: 15px; color: var(--blue);
@@ -139,6 +140,7 @@ label, legend {
   font-size: 12.5px; color: var(--label); padding: 0;
 }
 label em, legend em { color: var(--err); font-style: normal; }
+label .optional, legend .optional { color: var(--muted); font-weight: 400; }
 .hint { font-size: 11px; color: var(--muted); }
 
 input[type="text"], input:not([type]), input[type="email"], input[type="tel"],

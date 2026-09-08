@@ -261,31 +261,6 @@
         </div>
       </section>
 
-      <!-- 5. certifications -->
-      <section class="card" id="certifications">
-        <h3 class="card-title">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
-            <circle cx="12" cy="9" r="5" /><path d="M8.5 13.5L7 22l5-2.5L17 22l-1.5-8.5" />
-          </svg>
-          Registrations &amp; Certifications
-        </h3>
-        <p class="card-note">Please note that by providing this information you are consenting to us to conduct reference checks.</p>
-
-        <div class="field">
-          <label>Registration Certificates <em>*</em></label>
-          <div class="dropzone" data-dropzone data-required data-attachment-type="Registration">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true">
-              <path d="M17 17h1a4 4 0 0 0 .4-8A6 6 0 0 0 7 8.6 4.5 4.5 0 0 0 6 17h1" />
-              <path d="M12 12v8m0-8l-3 3m3-3l3 3" />
-            </svg>
-            <p>Drag and drop files here or <button type="button" class="btn btn-browse">Browse Files</button></p>
-            <small>PDF, JPG, PNG (Max. 10MB each)</small>
-            <input type="file" multiple accept=".pdf,.jpg,.jpeg,.png" hidden />
-            <ul class="file-list"></ul>
-          </div>
-        </div>
-      </section>
-
       <!-- 4. employment -->
       <section class="card" id="employment">
         <h3 class="card-title">
@@ -295,8 +270,8 @@
           Employment Details
         </h3>
 
-        <label class="table-label">Employment History <em>*</em></label>
-        <div class="table-wrap" data-required-table="employment-table">
+        <label class="table-label">Employment History <span class="optional">(Optional)</span></label>
+        <div class="table-wrap">
           <table class="grid-table" id="employment-table">
             <thead>
               <tr>
@@ -315,8 +290,33 @@
         <button type="button" class="btn btn-add" data-add-row="employment-table">+ Add More</button>
 
         <div class="field">
-          <label>Employment Experience Certificates <em>*</em></label>
-          <div class="dropzone" data-dropzone data-required data-attachment-type="Experience">
+          <label>Employment Experience Certificates <span class="optional">(Optional)</span></label>
+          <div class="dropzone" data-dropzone data-attachment-type="Experience">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true">
+              <path d="M17 17h1a4 4 0 0 0 .4-8A6 6 0 0 0 7 8.6 4.5 4.5 0 0 0 6 17h1" />
+              <path d="M12 12v8m0-8l-3 3m3-3l3 3" />
+            </svg>
+            <p>Drag and drop files here or <button type="button" class="btn btn-browse">Browse Files</button></p>
+            <small>PDF, JPG, PNG (Max. 10MB each)</small>
+            <input type="file" multiple accept=".pdf,.jpg,.jpeg,.png" hidden />
+            <ul class="file-list"></ul>
+          </div>
+        </div>
+      </section>
+
+      <!-- 5. certifications -->
+      <section class="card" id="certifications">
+        <h3 class="card-title">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+            <circle cx="12" cy="9" r="5" /><path d="M8.5 13.5L7 22l5-2.5L17 22l-1.5-8.5" />
+          </svg>
+          Registrations &amp; Certifications
+        </h3>
+        <p class="card-note">Please note that by providing this information you are consenting to us to conduct reference checks.</p>
+
+        <div class="field">
+          <label>Registration Certificates <span class="optional">(Optional)</span></label>
+          <div class="dropzone" data-dropzone data-attachment-type="Registration">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true">
               <path d="M17 17h1a4 4 0 0 0 .4-8A6 6 0 0 0 7 8.6 4.5 4.5 0 0 0 6 17h1" />
               <path d="M12 12v8m0-8l-3 3m3-3l3 3" />
@@ -339,7 +339,7 @@
             References
           </h3>
           <p class="card-note">Work / Personal references.</p>
-          <label class="table-label">Please list your references</label>
+          <label class="table-label">Please list your references <span class="optional">(Optional)</span></label>
           <div class="table-wrap">
             <table class="grid-table" id="references-table">
               <thead>
