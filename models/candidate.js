@@ -190,13 +190,19 @@ async function submitApplication(candidateId) {
   await bcClient.request('post', `candidates(${candidateId})/Microsoft.NAV.submit`, { data: {} });
 }
 
-async function createInBc(candidate) {
-  const created = await bcClient.request('post', 'candidates', { data: candidatePayload(candidate) });
-  const { id } = created;
+// Everything after the candidate row is another dozen round trips to Business
+// Central, and none of it changes the reference number the applicant is given. It
+// runs behind the response rather than in front of it, so the form comes back as
+// soon as the record exists and is numbered.
+//
+// Nothing in here may throw. There is no request left to report a failure to, and an
+// unhandled rejection would take the process down with it. A failure leaves the
+// application in BC as a draft, which is the same state the missing-submit-action
+// fallback has always produced, and recruitment can finish it there.
+async function finishInBc(created, candidate) {
+  const { id, entryNo } = created;
+  const reason = (err) => err.response?.data?.error?.message || err.message;
 
-  // The candidate row already exists from here on. If a line or a file fails, say so
-  // plainly instead of letting it read as "nothing was saved" - the application is in
-  // Business Central as a draft and can be completed there.
   try {
     await postLines(id, candidate);
 
@@ -205,31 +211,40 @@ async function createInBc(candidate) {
     const photo = (candidate.attachments || []).find((f) => f.attachmentType === 'Photo');
     const onPicture = await postPicture(id, photo);
     await postAttachments(
-      created.entryNo,
+      entryNo,
       onPicture ? candidate.attachments.filter((f) => f !== photo) : candidate.attachments,
     );
   } catch (err) {
-    err.partialSave = { id, entryNo: created.entryNo };
-    throw err;
+    console.error(`[bc] entry ${entryNo} was created but could not be completed: ${reason(err)}. `
+      + 'It is a draft in Business Central, and the applicant has already been told the '
+      + 'application was received.');
+    return;
   }
 
-  let submitted = true;
   try {
     await submitApplication(id);
   } catch (err) {
     // The bound action only exists once the API page carries a ServiceEnabled submit
     // procedure. Where it is missing the application still arrived in full and simply
     // stays a draft, which recruitment can submit in BC - not worth losing over.
-    if (err.response?.status !== 404) {
-      err.partialSave = { id, entryNo: created.entryNo };
-      throw err;
-    }
-    submitted = false;
-    console.warn('[bc] candidates/Microsoft.NAV.submit is not published - entry '
-      + `${created.entryNo} was left as a draft.`);
+    console.warn(`[bc] entry ${entryNo} was left as a draft: `
+      + (err.response?.status === 404
+        ? 'candidates/Microsoft.NAV.submit is not published.'
+        : reason(err)));
   }
+}
 
-  return { ...await bcClient.request('get', `candidates(${id})`), submitted };
+async function createInBc(candidate) {
+  const created = await bcClient.request('post', 'candidates', { data: candidatePayload(candidate) });
+
+  // The entry number is on the row the moment it is created, so the applicant is
+  // answered from here and does not wait for the rest of the work.
+  finishInBc(created, candidate)
+    .catch((err) => console.error('[bc] completing an application failed:', err.message));
+
+  // The row exists and is numbered but is still a draft at this point, so the
+  // controller words the message as "received" rather than "submitted".
+  return { ...created, submitted: false };
 }
 
 async function readLocal() {
