@@ -164,6 +164,9 @@ function validateCandidate(req, res, next) {
   if (!attached('Registration')) {
     errors.push('At least one registration certificate is required');
   }
+  if (!attached('Experience')) {
+    errors.push('At least one employment experience certificate is required');
+  }
 
   // Assembled once here so every downstream consumer sees the same name.
   candidate.candidateName = [
