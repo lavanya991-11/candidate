@@ -138,7 +138,7 @@ svg { width: 18px; height: 18px; flex: none; stroke-linecap: round; stroke-linej
 label, legend {
   font-size: 12.5px; color: var(--label); padding: 0;
 }
-label em { color: var(--err); font-style: normal; }
+label em, legend em { color: var(--err); font-style: normal; }
 .hint { font-size: 11px; color: var(--muted); }
 
 input[type="text"], input:not([type]), input[type="email"], input[type="tel"],
@@ -156,6 +156,10 @@ input:focus, select:focus, textarea:focus {
   outline: none; border-color: var(--blue); box-shadow: 0 0 0 3px rgba(37, 99, 235, .13);
 }
 input.invalid, select.invalid { border-color: var(--err); background: #fef4f4; }
+/* A radio group, an attachment section and a table cannot show the state on an
+   input of their own, so the whole block is flagged instead. */
+fieldset.invalid legend, .table-wrap.invalid + .btn-add { color: var(--err); }
+.dropzone.invalid, .table-wrap.invalid { border: 1px solid var(--err); background: #fef4f4; }
 
 .radios { display: flex; flex-wrap: wrap; gap: 8px 20px; padding-top: 4px; }
 .radios-wrap { max-width: 320px; }

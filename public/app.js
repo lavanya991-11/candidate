@@ -126,6 +126,9 @@ function syncPermanentAddress() {
     target.readOnly = same && target.tagName === 'INPUT';
     target.disabled = same && target.tagName === 'SELECT';
     target.style.background = same ? '#f7f9fc' : '';
+    // Address 2 is the one optional part; the rest have to be filled in by hand
+    // as soon as the permanent address is no longer a copy of the current one.
+    if (to !== 'per_line2') target.required = !same;
   });
 }
 
@@ -190,9 +193,28 @@ function setErrors(list) {
   });
 }
 
+// Mandatory means four different things here: a plain [required] input, a radio
+// group with nothing chosen, an attachment section with no file, and a table with
+// no row filled in. The server checks all four again on submission.
 function markInvalid() {
   form.querySelectorAll('.invalid').forEach((el) => el.classList.remove('invalid'));
+
   const missing = [...form.querySelectorAll('[required]')].filter((el) => !el.value.trim());
+
+  form.querySelectorAll('[data-required-group]').forEach((group) => {
+    if (!value(group.dataset.requiredGroup)) missing.push(group);
+  });
+
+  form.querySelectorAll('[data-dropzone][data-required]').forEach((zone) => {
+    if (!zone.querySelector('input[type="file"]').files.length) missing.push(zone);
+  });
+
+  form.querySelectorAll('[data-required-table]').forEach((wrap) => {
+    const rows = [...wrap.querySelectorAll('tbody tr')];
+    const filled = rows.some((tr) => [...tr.querySelectorAll('input')].some((i) => i.value.trim()));
+    if (!filled) missing.push(wrap);
+  });
+
   missing.forEach((el) => el.classList.add('invalid'));
   return missing;
 }
@@ -359,7 +381,9 @@ form.addEventListener('submit', async (event) => {
 
   const missing = markInvalid();
   if (missing.length) {
-    missing[0].focus();
+    const [first] = missing;
+    if (first.matches('input, select, textarea')) first.focus();
+    else first.scrollIntoView({ block: 'center', behavior: 'smooth' });
     setStatus('Please complete the required fields marked with *.', 'err');
     return;
   }

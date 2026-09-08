@@ -28,6 +28,19 @@ function cleanAddress(raw = {}, label, errors) {
   return address;
 }
 
+// Every part of an address is mandatory except line 2, which is genuinely optional
+// for addresses that have no apartment or street name.
+const REQUIRED_ADDRESS = [
+  ['line1', 'line 1'], ['city', 'city'], ['state', 'state'],
+  ['pinCode', 'PIN / post code'], ['country', 'country'],
+];
+
+function checkAddress(address, label, errors) {
+  for (const [field, name] of REQUIRED_ADDRESS) {
+    if (!address[field]) errors.push(`${label} ${name} is required`);
+  }
+}
+
 function cleanDate(raw, label, errors) {
   const value = str(raw);
   if (value && !DATE_RE.test(value)) {
@@ -91,6 +104,7 @@ function validateCandidate(req, res, next) {
 
   if (!candidate.firstName) errors.push('First name is required');
   if (!candidate.lastName) errors.push('Last name is required');
+  if (!candidate.gender) errors.push('Gender is required');
   if (!candidate.positionAppliedFor) errors.push('Position applied for is required');
 
   if (!candidate.email) errors.push('Email address is required');
@@ -116,9 +130,12 @@ function validateCandidate(req, res, next) {
   // the application is submitted. Catching them here keeps a submission from creating
   // a record in BC that then fails halfway through and is left sitting as a draft.
   if (!candidate.dateOfBirth) errors.push('Date of birth is required');
-  if (!candidate.currentAddress.line1) errors.push('Current address line 1 is required');
-  if (!candidate.currentAddress.city) errors.push('Current address city is required');
-  if (!candidate.currentAddress.pinCode) errors.push('Current address PIN / post code is required');
+  checkAddress(candidate.currentAddress, 'Current address', errors);
+  // A mirrored permanent address is already known to be complete, so it is only
+  // worth checking when the candidate has entered a different one.
+  if (!candidate.sameAsCurrent) {
+    checkAddress(candidate.permanentAddress, 'Permanent address', errors);
+  }
   if (!candidate.qualification) errors.push('Educational qualification is required');
 
   // Two conditional rules the table enforces with its own errors.
@@ -133,6 +150,21 @@ function validateCandidate(req, res, next) {
   candidate.employment = cleanEmployment(body.employment, errors);
   candidate.references = cleanReferences(body.references, errors);
 
+  if (!candidate.employment.length) {
+    errors.push('At least one employment history row is required');
+  }
+
+  // Attached files were parsed out of the multipart body before validation. The
+  // photo stays optional; the two certificate sections do not.
+  candidate.attachments = req.attachments || [];
+  const attached = (type) => candidate.attachments.some((f) => f.attachmentType === type);
+  if (!attached('Education')) {
+    errors.push('At least one graduation certificate or mark sheet is required');
+  }
+  if (!attached('Registration')) {
+    errors.push('At least one registration certificate is required');
+  }
+
   // Assembled once here so every downstream consumer sees the same name.
   candidate.candidateName = [
     candidate.title, candidate.firstName, candidate.middleName, candidate.lastName,
@@ -141,9 +173,6 @@ function validateCandidate(req, res, next) {
   if (errors.length) {
     return res.status(400).json({ error: 'Validation failed', code: 'VALIDATION_FAILED', details: errors });
   }
-
-  // Attached files were parsed out of the multipart body before validation.
-  candidate.attachments = req.attachments || [];
 
   req.candidate = candidate;
   next();

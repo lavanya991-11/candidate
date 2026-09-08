@@ -68,7 +68,7 @@
 
         <div class="grid grid-name">
           <div class="field">
-            <label for="title">Full Name</label>
+            <label for="title">Full Name <em>*</em></label>
             <!-- These match the Candidate Salutation enum in Business Central. -->
             <select id="title" name="title">
               <option value="">Title</option>
@@ -88,14 +88,14 @@
             <input id="lastName" name="lastName" placeholder="Last Name" maxlength="50" required />
           </div>
           <div class="field">
-            <label for="dateOfBirth">Date of Birth</label>
+            <label for="dateOfBirth">Date of Birth <em>*</em></label>
             <input id="dateOfBirth" name="dateOfBirth" type="date" required />
           </div>
         </div>
 
         <div class="grid grid-choices">
-          <fieldset class="field">
-            <legend>Gender</legend>
+          <fieldset class="field" data-required-group="gender">
+            <legend>Gender <em>*</em></legend>
             <div class="radios">
               <label><input type="radio" name="gender" value="Male" /><span>Male</span></label>
               <label><input type="radio" name="gender" value="Female" /><span>Female</span></label>
@@ -156,7 +156,7 @@
             Current Address
           </h3>
           <div class="field">
-            <label for="cur_line1">Door No. / Flat No. / Address 1</label>
+            <label for="cur_line1">Door No. / Flat No. / Address 1 <em>*</em></label>
             <input id="cur_line1" name="cur_line1" placeholder="Enter address line 1" maxlength="100" required />
           </div>
           <div class="field">
@@ -165,20 +165,20 @@
           </div>
           <div class="grid grid-2">
             <div class="field">
-              <label for="cur_city">City</label>
+              <label for="cur_city">City <em>*</em></label>
               <input id="cur_city" name="cur_city" placeholder="City" maxlength="50" required />
             </div>
             <div class="field">
-              <label for="cur_state">State</label>
-              <input id="cur_state" name="cur_state" placeholder="State" maxlength="50" />
+              <label for="cur_state">State <em>*</em></label>
+              <input id="cur_state" name="cur_state" placeholder="State" maxlength="50" required />
             </div>
             <div class="field">
-              <label for="cur_pin">Pin Code</label>
+              <label for="cur_pin">Pin Code <em>*</em></label>
               <input id="cur_pin" name="cur_pin" placeholder="Pin Code" maxlength="20" required />
             </div>
             <div class="field">
-              <label for="cur_country">Country</label>
-              <select id="cur_country" name="cur_country" data-countries></select>
+              <label for="cur_country">Country <em>*</em></label>
+              <select id="cur_country" name="cur_country" data-countries required></select>
             </div>
           </div>
           <label class="checkbox">
@@ -195,7 +195,7 @@
             Permanent Address
           </h3>
           <div class="field">
-            <label for="per_line1">Door No. / Flat No. / Address 1</label>
+            <label for="per_line1">Door No. / Flat No. / Address 1 <em>*</em></label>
             <input id="per_line1" name="per_line1" placeholder="Enter address line 1" maxlength="100" />
           </div>
           <div class="field">
@@ -204,19 +204,19 @@
           </div>
           <div class="grid grid-2">
             <div class="field">
-              <label for="per_city">City</label>
+              <label for="per_city">City <em>*</em></label>
               <input id="per_city" name="per_city" placeholder="City" maxlength="50" />
             </div>
             <div class="field">
-              <label for="per_state">State</label>
+              <label for="per_state">State <em>*</em></label>
               <input id="per_state" name="per_state" placeholder="State" maxlength="50" />
             </div>
             <div class="field">
-              <label for="per_pin">Pin Code</label>
+              <label for="per_pin">Pin Code <em>*</em></label>
               <input id="per_pin" name="per_pin" placeholder="Pin Code" maxlength="20" />
             </div>
             <div class="field">
-              <label for="per_country">Country</label>
+              <label for="per_country">Country <em>*</em></label>
               <select id="per_country" name="per_country" data-countries></select>
             </div>
           </div>
@@ -233,8 +233,8 @@
         </h3>
 
         <div class="grid grid-2 grid-top">
-          <fieldset class="field">
-            <legend>Qualification Details</legend>
+          <fieldset class="field" data-required-group="qualification">
+            <legend>Qualification Details <em>*</em></legend>
             <div class="radios radios-wrap">
               <label><input type="radio" name="qualification" value="Diploma" /><span>Diploma</span></label>
               <label><input type="radio" name="qualification" value="Graduate" /><span>Graduate</span></label>
@@ -247,8 +247,8 @@
           </fieldset>
 
           <div class="field">
-            <label>Graduation Certificates &amp; Mark Sheets (If Any)</label>
-            <div class="dropzone" data-dropzone data-attachment-type="Education">
+            <label>Graduation Certificates &amp; Mark Sheets <em>*</em></label>
+            <div class="dropzone" data-dropzone data-required data-attachment-type="Education">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true">
                 <path d="M17 17h1a4 4 0 0 0 .4-8A6 6 0 0 0 7 8.6 4.5 4.5 0 0 0 6 17h1" />
                 <path d="M12 12v8m0-8l-3 3m3-3l3 3" />
@@ -273,8 +273,8 @@
         <p class="card-note">Please note that by providing this information you are consenting to us to conduct reference checks.</p>
 
         <div class="field">
-          <label>Registration Certificates</label>
-          <div class="dropzone" data-dropzone data-attachment-type="Registration">
+          <label>Registration Certificates <em>*</em></label>
+          <div class="dropzone" data-dropzone data-required data-attachment-type="Registration">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true">
               <path d="M17 17h1a4 4 0 0 0 .4-8A6 6 0 0 0 7 8.6 4.5 4.5 0 0 0 6 17h1" />
               <path d="M12 12v8m0-8l-3 3m3-3l3 3" />
@@ -296,8 +296,8 @@
           Employment Details
         </h3>
 
-        <label class="table-label">Employment History</label>
-        <div class="table-wrap">
+        <label class="table-label">Employment History <em>*</em></label>
+        <div class="table-wrap" data-required-table="employment-table">
           <table class="grid-table" id="employment-table">
             <thead>
               <tr>
