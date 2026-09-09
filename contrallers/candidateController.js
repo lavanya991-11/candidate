@@ -10,8 +10,8 @@ async function createCandidate(req, res, next) {
     // draft, so the applicant is told it arrived without being promised a status
     // that the record does not have.
     const message = config.bc.enabled
-      ? `Application ${saved.submitted === false ? 'received' : 'submitted'}. `
-        + `Your reference number is ${saved.entryNo}.`
+      ? `Thank you. Your application has been ${saved.submitted === false ? 'received' : 'submitted'} successfully. `
+        + `Please quote reference number ${saved.entryNo} in any future correspondence.`
       : 'Application saved locally (Business Central is not configured).';
 
     await mailer.sendApplicationConfirmation(req.candidate);

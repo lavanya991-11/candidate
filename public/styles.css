@@ -253,7 +253,12 @@ fieldset.invalid legend, .table-wrap.invalid + .btn-add { color: var(--err); }
 .footnote svg { width: 14px; height: 14px; }
 
 #status { margin: 16px auto 0; max-width: 620px; text-align: center; font-size: 14px; }
-#status.ok { color: var(--ok); font-weight: 600; }
+#status.ok {
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  padding: 12px 18px; color: var(--ok); font-weight: 600;
+  background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px;
+}
+#status.ok::before { content: "\2713"; font-size: 15px; line-height: 1; }
 #status.err { color: var(--err); font-weight: 600; }
 #error-list {
   max-width: 620px; margin: 10px auto 0; padding: 12px 16px 12px 32px;
