@@ -25,6 +25,7 @@ const ROW_TEMPLATES = {
     <td><input name="emp_companyName" maxlength="100" /></td>
     <td><input name="emp_position" maxlength="100" /></td>
     <td><input name="emp_department" maxlength="100" /></td>
+    <td><input name="emp_yearsOfExperience" type="number" min="0" max="60" step="0.5" /></td>
     <td><input name="emp_fromDate" type="date" /></td>
     <td><input name="emp_tillDate" type="date" /></td>
     <td class="col-act">
@@ -111,7 +112,8 @@ function collect() {
     englishCertification: value('englishCertification'),
     englishTestDate: value('englishTestDate'),
     employment: rowsFrom('employment-table', 'emp',
-      ['employerName', 'companyName', 'position', 'department', 'fromDate', 'tillDate']),
+      ['employerName', 'companyName', 'position', 'department', 'yearsOfExperience',
+        'fromDate', 'tillDate']),
     references: rowsFrom('references-table', 'ref',
       ['name', 'email', 'phoneNo', 'notes']),
   };
@@ -189,7 +191,8 @@ function restoreDraft() {
   document.querySelector('#references-table tbody').innerHTML = '';
   (draft.employment || []).forEach((r) => addRow('employment-table', {
     emp_employerName: r.employerName, emp_companyName: r.companyName, emp_position: r.position,
-    emp_department: r.department, emp_fromDate: r.fromDate, emp_tillDate: r.tillDate,
+    emp_department: r.department, emp_yearsOfExperience: r.yearsOfExperience,
+    emp_fromDate: r.fromDate, emp_tillDate: r.tillDate,
   }));
   (draft.references || []).forEach((r) => addRow('references-table', {
     ref_name: r.name, ref_email: r.email, ref_phoneNo: r.phoneNo, ref_notes: r.notes,

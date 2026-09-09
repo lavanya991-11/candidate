@@ -103,6 +103,12 @@ function employmentPayload(row) {
     position: clip(row.position, 100),
     department: clip(row.department, 100),
   };
+  // Left out when the cell is empty so the line keeps the field's own default
+  // instead of being told the candidate has zero years behind them.
+  if (row.yearsOfExperience !== '' && row.yearsOfExperience !== undefined
+      && row.yearsOfExperience !== null) {
+    line.yearsOfExperience = Number(row.yearsOfExperience);
+  }
   if (row.fromDate) line.fromDate = row.fromDate;
   if (row.tillDate) line.tillDate = row.tillDate;
   return line;

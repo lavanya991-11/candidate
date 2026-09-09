@@ -50,6 +50,20 @@ function cleanDate(raw, label, errors) {
   return value;
 }
 
+// Years of experience arrives as text from a number input. It is kept as a number so
+// Business Central gets a decimal rather than a string, and an empty cell stays empty
+// rather than becoming a 0 that would read as "no experience".
+function cleanYears(raw, label, errors) {
+  const value = str(raw) || (typeof raw === 'number' ? String(raw) : '');
+  if (!value) return '';
+  const years = Number(value);
+  if (!Number.isFinite(years) || years < 0 || years > 60) {
+    errors.push(`${label} must be a number between 0 and 60`);
+    return '';
+  }
+  return years;
+}
+
 function cleanEmployment(rows, errors) {
   if (!Array.isArray(rows)) return [];
   return rows.slice(0, 20).map((row, i) => {
@@ -59,6 +73,9 @@ function cleanEmployment(rows, errors) {
       companyName: str(row.companyName).slice(0, 100),
       position: str(row.position).slice(0, 100),
       department: str(row.department).slice(0, 100),
+      yearsOfExperience: cleanYears(
+        row.yearsOfExperience, `Employment row ${n} Years of Experience`, errors,
+      ),
       fromDate: cleanDate(row.fromDate, `Employment row ${n} From Date`, errors),
       tillDate: cleanDate(row.tillDate, `Employment row ${n} Till Date`, errors),
     };
@@ -66,7 +83,8 @@ function cleanEmployment(rows, errors) {
       errors.push(`Employment row ${n}: From Date is after Till Date`);
     }
     if (!entry.employerName
-        && (entry.companyName || entry.position || entry.department || entry.fromDate)) {
+        && (entry.companyName || entry.position || entry.department
+          || entry.yearsOfExperience !== '' || entry.fromDate)) {
       errors.push(`Employment row ${n}: employer name is required when the row is filled in`);
     }
     return entry;

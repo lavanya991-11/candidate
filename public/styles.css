@@ -206,7 +206,12 @@ fieldset.invalid legend, .table-wrap.invalid + .btn-add { color: var(--err); }
 .table-label { display: block; margin-bottom: 8px; }
 .table-wrap { overflow-x: auto; }
 .grid-table { width: 100%; border-collapse: collapse; min-width: 620px; }
-#employment-table { min-width: 760px; }
+#employment-table { min-width: 900px; }
+.grid-table .col-years { width: 96px; }
+/* The spinner arrows sit on top of the value in a cell this narrow. */
+.grid-table input[type="number"] { -moz-appearance: textfield; }
+.grid-table input[type="number"]::-webkit-outer-spin-button,
+.grid-table input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
 .grid-table th, .grid-table td { border: 1px solid var(--line); padding: 0; }
 .grid-table th {
   background: #f7f9fc; font-size: 12px; font-weight: 600; color: var(--label);
