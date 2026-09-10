@@ -182,7 +182,7 @@ function validateCandidate(req, res, next) {
 
   // Assembled once here so every downstream consumer sees the same name.
   candidate.candidateName = [
-    candidate.titl, candidate.firstName, candidate.middleName, candidate.lastName,
+    candidate.title, candidate.firstName, candidate.middleName, candidate.lastName,
   ].filter(Boolean).join(' ').slice(0, 100);
 
   if (errors.length) {
