@@ -44,7 +44,7 @@ function candidatePayload(c) {
   };
 
   // Personal information
-  set('salutation', ENUMS.salutation[c.title]);
+  set('salutation', ENUMS.salutation[c.titl]);
   set('firstName', clip(c.firstName, 50));
   set('middleName', clip(c.middleName, 50));
   set('lastName', clip(c.lastName, 50));

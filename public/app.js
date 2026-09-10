@@ -29,7 +29,7 @@ const ROW_TEMPLATES = {
     <td><input name="emp_fromDate" type="date" /></td>
     <td><input name="emp_tillDate" type="date" /></td>
     <td class="col-act">
-      <button type="button" class="row-remove" title="Remove row" aria-label="Remove row">
+      <button type="button" class="row-remove" titl="Remove row" aria-label="Remove row">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
           <path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14" />
         </svg>
@@ -88,7 +88,7 @@ const joinPhone = (dial, number) => (dial && number ? `(${dial}) ${number}` : nu
 
 function collect() {
   return {
-    title: value('title'),
+    titl: value('titl'),
     firstName: value('firstName'),
     middleName: value('middleName'),
     lastName: value('lastName'),
@@ -169,7 +169,7 @@ function restoreDraft() {
     else el.value = val;
   };
 
-  ['title', 'firstName', 'middleName', 'lastName', 'dateOfBirth', 'gender', 'maritalStatus',
+  ['titl', 'firstName', 'middleName', 'lastName', 'dateOfBirth', 'gender', 'maritalStatus',
     'positionAppliedFor', 'email', 'qualification', 'otherQualification',
     'englishCertification',
     'englishTestDate', 'sameAsCurrent'].forEach((k) => setValue(k, draft[k]));
@@ -270,7 +270,7 @@ document.querySelectorAll('select[data-countries]').forEach((select) => {
 
 document.querySelectorAll('select[data-dial-codes]').forEach((select) => {
   select.innerHTML = '<option value="">Code</option>' +
-    COUNTRIES.map(([code, name, dial]) => `<option value="${dial}" title="${name}">${dial} (${code})</option>`).join('');
+    COUNTRIES.map(([code, name, dial]) => `<option value="${dial}" titl="${name}">${dial} (${code})</option>`).join('');
 });
 
 // Business Central only accepts "Other Qualification" alongside the Other option.
