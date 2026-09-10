@@ -110,7 +110,7 @@ svg { width: 18px; height: 18px; flex: none; stroke-linecap: round; stroke-linej
   margin-bottom: 16px;
 }
 .card[id], .actions[id] { scroll-margin-top: 22px; }
-.card-title {
+.card-titl {
   display: flex; align-items: center; gap: 9px;
   margin: 0 0 16px; font-size: 15px; color: var(--blue);
 }
